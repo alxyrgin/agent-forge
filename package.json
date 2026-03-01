@@ -1,7 +1,8 @@
 {
-  "name": "agent-forge",
+  "name": "@alxyrgin/agent-forge",
   "version": "1.0.0",
   "description": "AI-driven Development Framework for Claude Code — scaffold Memory Bank, agents, skills, and rules in any project",
+  "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "bin": {
