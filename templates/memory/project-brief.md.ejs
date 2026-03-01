@@ -1,0 +1,36 @@
+# <%= projectName %> — описание проекта
+
+## Цель
+<%= projectDescription %>
+
+## Стек
+- **Язык:** <%= stack %>
+<% if (framework !== 'None') { %>
+- **Фреймворк:** <%= framework %>
+<% } %>
+- **Тесты:** <%= testFramework %>
+
+## Структура
+- **Исходный код:** `<%= srcDir %>`
+- **Тесты:** `<%= testDir %>`
+
+## Команда
+
+| Роль | Имя | Email |
+|------|-----|-------|
+<% team.forEach(function(member) { %>
+| <%= member.role %> | <%= member.name %> | <%= member.email %> |
+<% }); %>
+
+<% if (milestones.length > 0) { %>
+## Milestones
+
+| Milestone | Дедлайн | Описание |
+|-----------|---------|----------|
+<% milestones.forEach(function(ms) { %>
+| <%= ms.name %> | <%= ms.deadline %> | <%= ms.description || '—' %> |
+<% }); %>
+<% } %>
+
+## Дата инициализации
+<%= today %>
