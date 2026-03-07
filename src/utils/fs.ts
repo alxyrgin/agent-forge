@@ -32,3 +32,7 @@ export async function fileExists(filePath: string): Promise<boolean> {
 export async function readFile(filePath: string): Promise<string> {
   return fs.readFile(filePath, 'utf-8');
 }
+
+export async function makeExecutable(filePath: string): Promise<void> {
+  await fs.chmod(filePath, 0o755);
+}

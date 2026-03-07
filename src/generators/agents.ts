@@ -12,12 +12,15 @@ const CORE_AGENTS = [
   'security-auditor',
   'doc-writer',
   'progress-tracker',
+  'skeptic',
 ];
 
 const EXTRA_AGENTS = [
   'planner',
   'integration-tester',
   'acceptance-tester',
+  'completeness-validator',
+  'report-writer',
 ];
 
 const MINIMAL_AGENTS = [

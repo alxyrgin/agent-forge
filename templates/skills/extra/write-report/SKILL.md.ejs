@@ -1,0 +1,26 @@
+---
+name: write-report
+description: Формирование отчёта о прогрессе проекта для заказчика.
+user-invocable: true
+disable-model-invocation: false
+allowed-tools: Read, Glob, Grep, Agent, Write
+---
+
+# Сформировать отчёт для заказчика
+
+## Шаг 1. Делегировать report-writer
+
+```
+Agent(subagent_type="report-writer", prompt="Сформируй отчёт о прогрессе проекта. Источники: dev-infra/memory/progress.md, dev-infra/tasks/tasks.json, dev-infra/memory/active-context.md, dev-infra/memory/decisions.md, dev-infra/sessions/.")
+```
+
+## Шаг 2. Показать отчёт пользователю
+
+Покажи сформированный отчёт. Спроси:
+- Нужно ли что-то добавить/убрать?
+- Тон подходит?
+- Сохранить в файл?
+
+## Шаг 3. Сохранить (по запросу)
+
+Если пользователь подтвердит — сохрани в `dev-infra/sessions/report-YYYY-MM-DD.md`.

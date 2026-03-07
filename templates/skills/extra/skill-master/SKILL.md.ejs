@@ -1,0 +1,51 @@
+---
+name: skill-master
+description: Создать новый skill (slash-команду) по шаблону.
+user-invocable: true
+disable-model-invocation: false
+argument-hint: "[skill-name]"
+allowed-tools: Read, Write, Glob
+---
+
+# Создать новый skill
+
+Аргумент: `$ARGUMENTS` — название нового skill (например: `deploy`, `migrate`).
+
+## Шаг 1. Валидация
+
+- Проверь, что название — kebab-case (lowercase, через дефис)
+- Проверь, что skill с таким названием не существует в `.claude/skills/`
+
+## Шаг 2. Спросить детали
+
+Спроси у пользователя:
+1. **Описание:** что делает этот skill?
+2. **Инструменты:** какие tools нужны? (Read, Write, Edit, Bash, Agent, etc.)
+3. **Аргументы:** принимает ли аргументы?
+4. **Автоматический или интерактивный:** выполняется полностью автоматически или требует подтверждений?
+
+## Шаг 3. Создать файл
+
+Создай `.claude/skills/[skill-name]/SKILL.md` по шаблону:
+
+```markdown
+---
+name: [skill-name]
+description: [описание]
+user-invocable: true
+disable-model-invocation: false
+[argument-hint: "[args]" — если принимает аргументы]
+allowed-tools: [список tools]
+---
+
+# [Название]
+
+[Инструкция по шагам]
+```
+
+## Шаг 4. Подтверждение
+
+Покажи созданный файл и скажи:
+```
+Skill /[skill-name] создан. Перезапусти Claude Code, чтобы он стал доступен.
+```

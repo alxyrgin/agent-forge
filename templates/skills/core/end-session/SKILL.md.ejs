@@ -1,6 +1,6 @@
 ---
 name: end-session
-description: Завершение рабочей сессии. Сохраняет контекст, обновляет memory bank, создаёт лог сессии.
+description: Завершение рабочей сессии. Сохраняет контекст, checkpoint, обновляет memory bank, создаёт лог сессии.
 user-invocable: true
 disable-model-invocation: false
 allowed-tools: Read, Write, Edit, Glob, Grep, Bash
@@ -17,7 +17,14 @@ allowed-tools: Read, Write, Edit, Glob, Grep, Bash
 Что ещё было сделано в этой сессии, помимо того, что я зафиксировал?
 ```
 
-## 2. Обновить active-context.md
+## 2. Сохранить checkpoint (если задача не закончена)
+
+Прочитай `dev-infra/memory/checkpoint.yml`. Если `active: true`:
+- Убедись, что `current_step`, `step_name` и `context` актуальны
+- Обнови `last_updated` на текущую дату
+- Сообщи пользователю: «Checkpoint сохранён. При следующем /start-session предложу восстановление.»
+
+## 3. Обновить active-context.md
 
 Перезапиши `dev-infra/memory/active-context.md`:
 - **Дата:** сегодня
@@ -27,15 +34,15 @@ allowed-tools: Read, Write, Edit, Glob, Grep, Bash
 - **Блокеры:** если появились
 - **Важные решения:** если были (также добавь в decisions.md)
 
-## 3. Обновить progress.md
+## 4. Обновить progress.md
 
 Пересчитай статусы задач из tasks.json.
 
-## 4. Определить участника
+## 5. Определить участника
 
 Определи, кто работал в этой сессии. Если неясно — спроси.
 
-## 5. Создать лог сессии
+## 6. Создать лог сессии
 
 Получи текущее время: `date +%H:%M`
 
@@ -65,7 +72,7 @@ allowed-tools: Read, Write, Edit, Glob, Grep, Bash
 - [если есть]
 ```
 
-## 6. Коммит и пуш
+## 7. Коммит и пуш
 
 Формат коммита:
 ```
@@ -75,6 +82,7 @@ memory(Участник): обновление после сессии YYYY-MM-D
 Включить в коммит:
 - dev-infra/memory/active-context.md
 - dev-infra/memory/progress.md
+- dev-infra/memory/checkpoint.yml
 - dev-infra/sessions/YYYY-MM-DD_HH-MM.md
 - dev-infra/tasks/tasks.json (если обновлён)
 

@@ -30,19 +30,44 @@
 
 **Исключение:** мелкие правки (1-2 строки, опечатки, конфиг) можно сделать самому.
 
+## Feature-size маршрутизация
+
+Перед началом работы определи размер задачи:
+
+| Размер | Критерии | Пайплайн |
+|--------|----------|----------|
+| **S** (Small) | 1 файл, < 50 строк, нет новых зависимостей | 4 шага: analyst → developer → unit-tester → фиксация |
+| **M** (Medium) | 2-5 файлов, новый модуль/компонент | 6 шагов: analyst → architect → developer → unit-tester → reviewer → фиксация |
+| **L** (Large) | 6+ файлов, архитектурные изменения, новые интеграции | 10 шагов: analyst → architect → **skeptic** → developer → unit-tester → reviewer → **smoke verification** → doc-writer → **tech-debt** → фиксация |
+
 ## Цикл разработки задачи
 
-При `/take-task` запускай агентов последовательно. После каждого — проверяй результат.
+При `/take-task` определи feature-size и запускай соответствующий пайплайн.
+
+### Полный пайплайн (L-задачи)
 
 ```
-[1] analyst    → Проверяешь: все ли требования найдены? Показываешь пользователю.
-[2] architect  → Проверяешь: план реалистичен? Показываешь пользователю.
-[3] developer  → Проверяешь: код соответствует плану? Нет хардкода?
-[4] unit-tester → Проверяешь: тесты покрывают ≥80%? Тесты проходят?
-[5] reviewer   → Проверяешь: CRITICAL/HIGH замечания?
-[6] doc-writer → Проверяешь: документация соответствует коду?
-[7] Фиксация  → Обновляешь tasks.json, progress.md, предлагаешь коммит.
+[1]  analyst           → Проверяешь: все ли требования найдены? Показываешь пользователю.
+[2]  architect          → Проверяешь: план реалистичен? Показываешь пользователю.
+[3]  skeptic            → Проверяешь: нет ли «миражей» в плане? PASS/WARN/FAIL.
+[4]  developer          → Проверяешь: код соответствует плану? Нет хардкода?
+[5]  unit-tester        → Проверяешь: тесты покрывают ≥80%? Тесты проходят?
+[6]  reviewer           → Проверяешь: CRITICAL/HIGH замечания?
+[7]  smoke verification → Запусти <%= testCommand %> и проверь, что всё зелёное.
+[8]  doc-writer         → Проверяешь: документация соответствует коду?
+[9]  tech-debt          → Есть ли отклонения? Зафиксируй в tech-debt.md.
+[10] Фиксация           → Обновляешь tasks.json, progress.md, предлагаешь коммит.
 ```
+
+### Checkpoint-система
+
+При каждом переходе между шагами обновляй `dev-infra/memory/checkpoint.yml`:
+- `active: true`
+- `current_step`, `step_name`
+- `context` — ключевые результаты предыдущих шагов
+
+При `/start-session` — если checkpoint активен, предложи восстановление с последнего шага.
+При `/complete-task` — очисти checkpoint (`active: false`).
 
 ### Трекинг прогресса
 
@@ -53,11 +78,14 @@
 ```
 Agent(subagent_type="analyst", prompt="...")
 Agent(subagent_type="architect", prompt="...")
+Agent(subagent_type="skeptic", prompt="...")
 Agent(subagent_type="developer", prompt="...")
 Agent(subagent_type="unit-tester", prompt="...")
 Agent(subagent_type="reviewer", prompt="...")
 Agent(subagent_type="doc-writer", prompt="...")
 Agent(subagent_type="progress-tracker", prompt="...")
+Agent(subagent_type="completeness-validator", prompt="...")
+Agent(subagent_type="report-writer", prompt="...")
 ```
 
 ### Discovery
@@ -67,18 +95,22 @@ Agent(subagent_type="progress-tracker", prompt="...")
 ## Когда начинается сессия (`/start-session`)
 
 1. Синхронизация с репозиторием
-2. Прочитай `active-context.md` и `progress.md`
-3. Покажи: milestone, прогресс, дедлайн, блокеры
-4. **Рекомендуй конкретную задачу**
-5. Спроси: «Берём эту задачу или выберешь другую?»
+2. Прочитай `active-context.md`, `progress.md` и `checkpoint.yml`
+3. Если checkpoint активен — предложи восстановление
+4. Покажи: milestone, прогресс, дедлайн, блокеры
+5. Проверь tech-debt триггеры — если есть «созревшие», подсвети
+6. **Рекомендуй конкретную задачу**
+7. Спроси: «Берём эту задачу или выберешь другую?»
 
 ## Ключевые правила
 
 1. **Ты — Team Lead, не исполнитель** — делегируй агентам, проверяй результат
-2. **Проверяй каждый этап** — не передавай дальше без проверки
-3. **Не додумывай — спрашивай** — discovery-интервью при неясностях
-4. **Связывай артефакты** — код → критерии приёмки → тесты
-5. **Обновляй memory** — после каждой задачи
+2. **Определи feature-size** — S/M/L определяет пайплайн
+3. **Проверяй каждый этап** — не передавай дальше без проверки
+4. **Не додумывай — спрашивай** — discovery-интервью при неясностях
+5. **Связывай артефакты** — код → критерии приёмки → тесты
+6. **Обновляй memory** — после каждой задачи
+7. **Обновляй checkpoint** — после каждого шага в пайплайне
 
 ## Ключевые файлы
 
@@ -88,6 +120,9 @@ Agent(subagent_type="progress-tracker", prompt="...")
 | Задачи | `dev-infra/tasks/tasks.json` |
 | Прогресс | `dev-infra/memory/progress.md` |
 | Активный контекст | `dev-infra/memory/active-context.md` |
+| Checkpoint | `dev-infra/memory/checkpoint.yml` |
+| Shared Resources | `.claude/rules/shared-resources.md` |
+| Context Loading | `.claude/rules/context-loading.md` |
 | Критерии приёмки | `dev-infra/tests/acceptance/` |
 | ПМИ-сценарии | `dev-infra/tests/pmi/` |
 
@@ -108,3 +143,4 @@ Agent(subagent_type="progress-tracker", prompt="...")
 - Не пропускать этап ревью
 - Не додумывать требования
 - Не передавать результат агента дальше без проверки
+- Не пропускать skeptic для L-задач

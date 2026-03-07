@@ -1,14 +1,28 @@
 {
   "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/protect-docs.sh"
+          }
+        ]
+      }
+    ],
     "Stop": [
       {
         "hooks": [
           {
             "type": "prompt",
-            "prompt": "Если в этой сессии были выполнены задачи или написан код, проверь: обновлены ли dev-infra/memory/active-context.md и dev-infra/memory/progress.md? Если нет — напомни пользователю выполнить /end-session для сохранения контекста."
+            "prompt": "Проверь перед выходом: 1) checkpoint.yml (если задача в процессе) 2) active-context.md 3) troubleshooting.md 4) decisions.md — всё актуально? Если нет — напомни /end-session."
           }
         ]
       }
     ]
+  },
+  "env": {
+    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
   }
 }

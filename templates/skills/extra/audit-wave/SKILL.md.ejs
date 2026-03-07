@@ -1,0 +1,58 @@
+---
+name: audit-wave
+description: Комплексный аудит перед milestone — 3 параллельных проверки с вердиктом GO/NO-GO.
+user-invocable: true
+disable-model-invocation: false
+allowed-tools: Read, Glob, Grep, Bash, Agent
+---
+
+# Комплексный аудит перед milestone
+
+Запускает 3 параллельных проверки и выносит вердикт GO/NO-GO.
+
+## Шаг 1. Запустить 3 проверки параллельно
+
+```
+Agent(subagent_type="completeness-validator", prompt="Проверь полноту реализации для текущего milestone. Требования: [из tasks.json].")
+
+Agent(subagent_type="security-auditor", prompt="Проведи аудит безопасности для текущего milestone. Проверь: авторизацию, валидацию, SQL-инъекции, XSS.")
+
+Agent(subagent_type="acceptance-tester", prompt="Проверь критерии приёмки для текущего milestone. Файлы: dev-infra/tests/acceptance/.")
+```
+
+## Шаг 2. Собрать результаты
+
+Дождись завершения всех 3 агентов. Собери вердикты:
+
+| Проверка | Агент | Вердикт |
+|----------|-------|---------|
+| Полнота | completeness-validator | COMPLETE / GAPS_FOUND / CRITICAL_GAPS |
+| Безопасность | security-auditor | PASS / WARN / FAIL |
+| Приёмка | acceptance-tester | PASS / PARTIAL / FAIL |
+
+## Шаг 3. Вынести вердикт
+
+### GO — можно релизить
+- Все 3 проверки: PASS/COMPLETE
+- Или: максимум 1 WARN/GAPS_FOUND без CRITICAL
+
+### NO-GO — нужна доработка
+- Любой FAIL или CRITICAL_GAPS
+- 2+ проверки с WARN/GAPS_FOUND
+
+## Шаг 4. Показать отчёт
+
+```markdown
+## Аудит milestone: [название]
+**Дата:** YYYY-MM-DD
+**Вердикт:** GO / NO-GO
+
+### Результаты проверок
+[таблица из шага 2]
+
+### Блокеры (если NO-GO)
+- [список конкретных проблем]
+
+### Рекомендации
+- [что нужно исправить]
+```

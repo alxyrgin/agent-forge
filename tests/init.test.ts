@@ -47,7 +47,7 @@ describe('agent-forge init', () => {
     const result = await generateAll(ctx);
 
     expect(result.errors).toHaveLength(0);
-    expect(result.filesCreated.length).toBeGreaterThanOrEqual(28);
+    expect(result.filesCreated.length).toBeGreaterThanOrEqual(35);
 
     // Check key files exist
     expect(await fs.pathExists(path.join(tmpDir, '.claude/CLAUDE.md'))).toBe(true);
@@ -58,11 +58,11 @@ describe('agent-forge init', () => {
   });
 
   it('generates correct number of agents for each preset', async () => {
-    // Core: 8 agents
+    // Core: 9 agents
     const coreCtx = createTestContext(tmpDir);
     const coreResult = await generateAll(coreCtx);
     const coreAgents = coreResult.filesCreated.filter(f => f.includes('/agents/'));
-    expect(coreAgents).toHaveLength(8);
+    expect(coreAgents).toHaveLength(9);
 
     // Clean up
     await fs.remove(tmpDir);
@@ -78,32 +78,73 @@ describe('agent-forge init', () => {
     await fs.remove(tmpDir);
     await fs.ensureDir(tmpDir);
 
-    // Full: 11 agents
+    // Full: 14 agents
     const fullCtx = { ...createTestContext(tmpDir), agentPreset: 'full' as const };
     const fullResult = await generateAll(fullCtx);
     const fullAgents = fullResult.filesCreated.filter(f => f.includes('/agents/'));
-    expect(fullAgents).toHaveLength(11);
+    expect(fullAgents).toHaveLength(14);
   });
 
-  it('generates 7 skills', async () => {
+  it('generates 7 skills for core preset', async () => {
     const ctx = createTestContext(tmpDir);
     const result = await generateAll(ctx);
     const skills = result.filesCreated.filter(f => f.includes('/skills/'));
     expect(skills).toHaveLength(7);
   });
 
-  it('generates 3 rules', async () => {
+  it('generates 12 skills for full preset', async () => {
+    const ctx = { ...createTestContext(tmpDir), agentPreset: 'full' as const };
+    const result = await generateAll(ctx);
+    const skills = result.filesCreated.filter(f => f.includes('/skills/'));
+    expect(skills).toHaveLength(12);
+  });
+
+  it('generates 5 rules', async () => {
     const ctx = createTestContext(tmpDir);
     const result = await generateAll(ctx);
     const rules = result.filesCreated.filter(f => f.includes('/rules/'));
-    expect(rules).toHaveLength(3);
+    expect(rules).toHaveLength(5);
   });
 
-  it('generates 8 memory bank files', async () => {
+  it('generates 9 memory bank files', async () => {
     const ctx = createTestContext(tmpDir);
     const result = await generateAll(ctx);
     const memory = result.filesCreated.filter(f => f.includes('/memory/'));
-    expect(memory).toHaveLength(8);
+    expect(memory).toHaveLength(9);
+  });
+
+  it('generates hooks directory', async () => {
+    const ctx = createTestContext(tmpDir);
+    await generateAll(ctx);
+
+    expect(await fs.pathExists(path.join(tmpDir, '.claude/hooks/protect-docs.sh'))).toBe(true);
+
+    // Check it's executable
+    const stats = await fs.stat(path.join(tmpDir, '.claude/hooks/protect-docs.sh'));
+    expect(stats.mode & 0o111).toBeGreaterThan(0);
+  });
+
+  it('generates checkpoint.yml', async () => {
+    const ctx = createTestContext(tmpDir);
+    await generateAll(ctx);
+
+    const content = await fs.readFile(
+      path.join(tmpDir, 'dev-infra/memory/checkpoint.yml'),
+      'utf-8'
+    );
+    expect(content).toContain('active: false');
+  });
+
+  it('generates settings.json with PreToolUse hook', async () => {
+    const ctx = createTestContext(tmpDir);
+    await generateAll(ctx);
+
+    const raw = await fs.readFile(path.join(tmpDir, '.claude/settings.json'), 'utf-8');
+    const settings = JSON.parse(raw);
+    expect(settings.hooks.PreToolUse).toBeDefined();
+    expect(settings.hooks.PreToolUse[0].matcher).toBe('Edit|Write');
+    expect(settings.hooks.Stop).toBeDefined();
+    expect(settings.env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS).toBe('1');
   });
 
   it('injects project name into CLAUDE.md', async () => {
@@ -178,10 +219,10 @@ describe('agent-forge init', () => {
 
     const raw = await fs.readFile(path.join(tmpDir, '.claude-forge.json'), 'utf-8');
     const manifest = JSON.parse(raw);
-    expect(manifest.version).toBe('1.0.0');
+    expect(manifest.version).toBe('2.0.0');
     expect(manifest.projectName).toBe('test-project');
     expect(manifest.expectedFiles).toBeInstanceOf(Array);
-    expect(manifest.expectedFiles.length).toBeGreaterThanOrEqual(28);
+    expect(manifest.expectedFiles.length).toBeGreaterThanOrEqual(35);
   });
 
   it('includes milestones in progress.md', async () => {

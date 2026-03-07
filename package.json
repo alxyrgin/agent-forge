@@ -1,7 +1,11 @@
 {
   "name": "@alxyrgin/agent-forge",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "AI-driven Development Framework for Claude Code — scaffold Memory Bank, agents, skills, and rules in any project",
+  "homepage": "https://github.com/alxyrgin/agent-forge#readme",
+  "bugs": {
+    "url": "https://github.com/alxyrgin/agent-forge/issues"
+  },
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -24,7 +28,10 @@
     "memory-bank",
     "development-framework",
     "cli",
-    "scaffolding"
+    "scaffolding",
+    "checkpoint",
+    "feature-routing",
+    "hooks"
   ],
   "author": "Aleksandr Yarygin",
   "license": "MIT",

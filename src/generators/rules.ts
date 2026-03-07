@@ -7,6 +7,8 @@ const RULES = [
   'commit-conventions',
   'development-cycle',
   'testing-standards',
+  'shared-resources',
+  'context-loading',
 ];
 
 export async function generateRules(

@@ -1,6 +1,6 @@
 ---
 name: complete-task
-description: Завершить задачу. Проверяет тесты, обновляет прогресс, предлагает следующую.
+description: Завершить задачу. Проверяет тесты, smoke verification, обновляет прогресс, очищает checkpoint.
 user-invocable: true
 disable-model-invocation: false
 argument-hint: "[task-id]"
@@ -14,24 +14,35 @@ allowed-tools: Read, Write, Edit, Glob, Grep, Bash
 ## 1. Определить задачу
 - Из аргумента или найти in_progress задачу в tasks.json
 
-## 2. Проверить готовность
+## 2. Smoke verification
+- Запусти полный набор тестов: `<%= testCommand %>`
+- Если тесты падают — **не завершай задачу**, сообщи пользователю
+
+## 3. Проверить готовность
 - **Тесты написаны?** Ищи тесты в `<%= testDir %>`
-- **Тесты проходят?** Запусти `<%= testCommand %>`
+- **Тесты проходят?** Результат из шага 2
 - **Критерии приёмки?** Проверь выполнение
 
-## 3. Проверить технический долг
+## 4. Проверить технический долг
 - Mock-данные вместо реальных?
 - Упрощённая логика?
 - Workaround?
 
 Если да — добавь запись в `dev-infra/memory/tech-debt.md`.
 
-## 4. Обновить систему
+## 5. Обновить систему
 ```
 Agent(subagent_type="progress-tracker", prompt="Задача [ID] завершена. Обнови tasks.json, progress.md, active-context.md.")
 ```
 
-## 5. Предложить следующую задачу
+## 6. Очистить checkpoint
+
+Обнови `dev-infra/memory/checkpoint.yml`:
+```yaml
+active: false
+```
+
+## 7. Предложить следующую задачу
 - По приоритету и зависимостям
 
-## 6. Предложить коммит
+## 8. Предложить коммит

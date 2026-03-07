@@ -12,6 +12,7 @@ const MEMORY_FILES = [
   'tech-debt.md',
   'patterns.md',
   'troubleshooting.md',
+  'checkpoint.yml',
 ];
 
 export async function generateMemoryBank(

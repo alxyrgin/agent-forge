@@ -1,9 +1,9 @@
 import path from 'path';
-import type { ProjectContext, GeneratorResult } from '../types.js';
+import type { ProjectContext, GeneratorResult, AgentPreset } from '../types.js';
 import { renderTemplate } from '../utils/template.js';
 import { writeFileSafe } from '../utils/fs.js';
 
-const SKILLS = [
+const CORE_SKILLS = [
   'start-session',
   'end-session',
   'take-task',
@@ -12,6 +12,30 @@ const SKILLS = [
   'plan',
   'review',
 ];
+
+const EXTRA_SKILLS = [
+  'interview',
+  'audit-wave',
+  'write-report',
+  'dashboard',
+  'skill-master',
+];
+
+function getSkillList(preset: AgentPreset): { name: string; dir: string }[] {
+  const skills: { name: string; dir: string }[] = [];
+
+  for (const name of CORE_SKILLS) {
+    skills.push({ name, dir: 'core' });
+  }
+
+  if (preset === 'full') {
+    for (const name of EXTRA_SKILLS) {
+      skills.push({ name, dir: 'extra' });
+    }
+  }
+
+  return skills;
+}
 
 export async function generateSkills(
   ctx: ProjectContext,
@@ -28,13 +52,15 @@ export async function generateSkills(
     defaultBranch: 'main',
   };
 
-  for (const skill of SKILLS) {
+  const skills = getSkillList(ctx.agentPreset);
+
+  for (const skill of skills) {
     try {
       const content = await renderTemplate(
-        `skills/core/${skill}/SKILL.md.ejs`,
+        `skills/${skill.dir}/${skill.name}/SKILL.md.ejs`,
         templateData
       );
-      const outputPath = path.join(ctx.targetDir, `.claude/skills/${skill}`, 'SKILL.md');
+      const outputPath = path.join(ctx.targetDir, `.claude/skills/${skill.name}`, 'SKILL.md');
       const status = await writeFileSafe(outputPath, content, overwrite);
 
       if (status === 'skipped') {
@@ -43,7 +69,7 @@ export async function generateSkills(
         result.filesCreated.push(outputPath);
       }
     } catch (err) {
-      result.errors.push(`Skill ${skill}: ${err}`);
+      result.errors.push(`Skill ${skill.name}: ${err}`);
     }
   }
 

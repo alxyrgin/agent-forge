@@ -61,7 +61,7 @@ export async function generateInfra(
   // .claude-forge.json — manifest for doctor command
   try {
     const manifest = {
-      version: '1.0.0',
+      version: '2.0.0',
       createdAt: ctx.today,
       projectName: ctx.projectName,
       agentPreset: ctx.agentPreset,
@@ -101,20 +101,30 @@ function getExpectedFiles(ctx: ProjectContext): string[] {
     'dev-infra/memory/tech-debt.md',
     'dev-infra/memory/patterns.md',
     'dev-infra/memory/troubleshooting.md',
+    'dev-infra/memory/checkpoint.yml',
   ];
+
+  // Hooks
+  files.push('.claude/hooks/protect-docs.sh');
 
   // Rules
   files.push(
     '.claude/rules/commit-conventions.md',
     '.claude/rules/development-cycle.md',
     '.claude/rules/testing-standards.md',
+    '.claude/rules/shared-resources.md',
+    '.claude/rules/context-loading.md',
   );
 
   // Skills
-  const skills = [
+  const coreSkills = [
     'start-session', 'end-session', 'take-task',
     'complete-task', 'status', 'plan', 'review',
   ];
+  const extraSkills = ['interview', 'audit-wave', 'write-report', 'dashboard', 'skill-master'];
+  const skills = ctx.agentPreset === 'full'
+    ? [...coreSkills, ...extraSkills]
+    : coreSkills;
   for (const skill of skills) {
     files.push(`.claude/skills/${skill}/SKILL.md`);
   }
@@ -122,10 +132,10 @@ function getExpectedFiles(ctx: ProjectContext): string[] {
   // Agents depend on preset
   const coreAgents = [
     'analyst', 'architect', 'developer', 'unit-tester',
-    'reviewer', 'security-auditor', 'doc-writer', 'progress-tracker',
+    'reviewer', 'security-auditor', 'doc-writer', 'progress-tracker', 'skeptic',
   ];
   const minimalAgents = ['analyst', 'developer', 'unit-tester', 'reviewer'];
-  const extraAgents = ['planner', 'integration-tester', 'acceptance-tester'];
+  const extraAgents = ['planner', 'integration-tester', 'acceptance-tester', 'completeness-validator', 'report-writer'];
 
   const agents = ctx.agentPreset === 'minimal'
     ? minimalAgents

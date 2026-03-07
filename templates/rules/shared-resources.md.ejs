@@ -1,0 +1,73 @@
+# Shared Resources — реестр singleton-ресурсов
+
+## Правило
+
+Singleton-ресурсы (подключения к БД, клиенты API, логгеры, кэши) создаются ОДИН раз и переиспользуются. Дублирование singleton — баг.
+
+## Реестр
+
+| Ресурс | Файл | Тип | Описание |
+|--------|------|-----|----------|
+| _пока ресурсов нет_ | | | |
+
+## Правила создания
+
+1. **Проверь реестр** — возможно, ресурс уже существует
+2. **Создай в одном месте** — singleton factory в выделенном файле
+3. **Добавь в реестр** — обнови таблицу выше
+4. **Не создавай дубликатов** — если ресурс есть, используй существующий
+
+## Паттерн
+
+<% if (stack === 'typescript') { %>
+```typescript
+// <%= srcDir %>lib/database.ts — singleton
+let instance: Database | null = null;
+
+export function getDatabase(): Database {
+  if (!instance) {
+    instance = new Database(process.env.DATABASE_URL);
+  }
+  return instance;
+}
+```
+<% } else if (stack === 'python') { %>
+```python
+# <%= srcDir %>lib/database.py — singleton
+_instance: Database | None = None
+
+def get_database() -> Database:
+    global _instance
+    if _instance is None:
+        _instance = Database(os.environ["DATABASE_URL"])
+    return _instance
+```
+<% } else if (stack === 'go') { %>
+```go
+// <%= srcDir %>lib/database.go — singleton
+var (
+    dbOnce sync.Once
+    dbInstance *Database
+)
+
+func GetDatabase() *Database {
+    dbOnce.Do(func() {
+        dbInstance = NewDatabase(os.Getenv("DATABASE_URL"))
+    })
+    return dbInstance
+}
+```
+<% } else { %>
+```
+// Singleton pattern: создай ресурс один раз, используй везде
+```
+<% } %>
+
+## Антипаттерн
+
+```
+// НЕ ДЕЛАЙ ТАК — создание нового подключения в каждом обработчике
+function handleRequest() {
+  const db = new Database(url); // каждый запрос — новое подключение!
+}
+```

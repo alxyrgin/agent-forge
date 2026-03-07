@@ -5,6 +5,7 @@ import { generateSkills } from './skills.js';
 import { generateRules } from './rules.js';
 import { generateClaudeMd } from './claude-md.js';
 import { generateInfra } from './infra.js';
+import { generateHooks } from './hooks.js';
 
 export async function generateAll(
   ctx: ProjectContext,
@@ -22,6 +23,7 @@ export async function generateAll(
     generateSkills,
     generateRules,
     generateMemoryBank,
+    generateHooks,
     generateInfra,
   ];
 
