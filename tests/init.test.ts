@@ -58,11 +58,11 @@ describe('agent-forge init', () => {
   });
 
   it('generates correct number of agents for each preset', async () => {
-    // Core: 9 agents
+    // Core: 8 agents
     const coreCtx = createTestContext(tmpDir);
     const coreResult = await generateAll(coreCtx);
     const coreAgents = coreResult.filesCreated.filter(f => f.includes('/agents/'));
-    expect(coreAgents).toHaveLength(9);
+    expect(coreAgents).toHaveLength(8);
 
     // Clean up
     await fs.remove(tmpDir);
@@ -78,11 +78,11 @@ describe('agent-forge init', () => {
     await fs.remove(tmpDir);
     await fs.ensureDir(tmpDir);
 
-    // Full: 14 agents
+    // Full: 8 agents (same as core, extra agents are now skills)
     const fullCtx = { ...createTestContext(tmpDir), agentPreset: 'full' as const };
     const fullResult = await generateAll(fullCtx);
     const fullAgents = fullResult.filesCreated.filter(f => f.includes('/agents/'));
-    expect(fullAgents).toHaveLength(14);
+    expect(fullAgents).toHaveLength(8);
   });
 
   it('generates 7 skills for core preset', async () => {
@@ -219,10 +219,10 @@ describe('agent-forge init', () => {
 
     const raw = await fs.readFile(path.join(tmpDir, '.claude-forge.json'), 'utf-8');
     const manifest = JSON.parse(raw);
-    expect(manifest.version).toBe('2.0.0');
+    expect(manifest.version).toBe('2.1.0');
     expect(manifest.projectName).toBe('test-project');
     expect(manifest.expectedFiles).toBeInstanceOf(Array);
-    expect(manifest.expectedFiles.length).toBeGreaterThanOrEqual(35);
+    expect(manifest.expectedFiles.length).toBeGreaterThanOrEqual(30);
   });
 
   it('includes milestones in progress.md', async () => {

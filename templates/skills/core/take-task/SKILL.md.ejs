@@ -33,7 +33,7 @@ allowed-tools: Read, Write, Edit, Glob, Grep, Bash, Agent, WebSearch
 Оцени размер задачи:
 - **S** (Small): 1 файл, < 50 строк, нет новых зависимостей → 4 шага
 - **M** (Medium): 2-5 файлов, новый модуль/компонент → 6 шагов
-- **L** (Large): 6+ файлов, архитектурные изменения → 10 шагов
+- **L** (Large): 6+ файлов, архитектурные изменения → 7 шагов
 
 В tasks.json: статус → `in_progress`, updated → сегодня.
 Создать прогресс-бар задачи через TaskCreate.
@@ -44,75 +44,131 @@ active: true
 task_id: "[ID]"
 task_title: "[название]"
 current_step: 1
-total_steps: [4/6/10]
-step_name: "analyst"
+total_steps: [4/6/7]
+step_name: "определение размера"
 feature_size: "[S/M/L]"
 started_at: "[дата]"
 last_updated: "[дата]"
 ```
 
+---
+
+## Пайплайн S (Small)
+
+### Шаг 2. Реализация — ДЕЛЕГИРОВАТЬ агенту developer
+```
+Agent(subagent_type="developer", prompt="Реализуй задачу [ID]. Описание: [description]. Контекст очевиден — мелкий фикс.")
+```
+- Проверь: код корректен?
+- Обнови checkpoint: `current_step: 2, step_name: "tester"`
+
+### Шаг 3. Тестирование — ДЕЛЕГИРОВАТЬ агенту tester
+```
+Agent(subagent_type="tester", prompt="Level: unit. Напиши тесты для [модуль]. Покрытие ≥80%. Запусти <%= testCommand %>.")
+```
+- Если тесты падают — верни developer'у
+- Обнови checkpoint: `current_step: 3, step_name: "tech-debt"`
+
+### Шаг 4. Tech-debt check
+Проверь отклонения от целевой реализации. Если есть — зафиксируй в `dev-infra/memory/tech-debt.md`.
+
+### Шаг 5. Завершение
+- Обнови tasks.json, progress.md, active-context.md
+- Покажи итог: что сделано, результат тестов
+- Предложи: `/complete-task`
+
+---
+
+## Пайплайн M (Medium)
+
 ### Шаг 2. Анализ требований — ДЕЛЕГИРОВАТЬ агенту analyst
 ```
 Agent(subagent_type="analyst", prompt="Проанализируй задачу [ID]. Описание: [description].")
 ```
-
 Покажи пользователю результат анализа. Дождись подтверждения.
-Обнови checkpoint: `current_step: 2, step_name: "architect"`.
+Обнови checkpoint: `current_step: 2, step_name: "developer"`
 
 ### Шаг 3. Discovery (если есть вопросы)
 - Задай конкретные вопросы пользователю
 - Зафиксируй решения в `dev-infra/memory/decisions.md`
 
-### Шаг 4. Проектирование — ДЕЛЕГИРОВАТЬ агенту architect (M, L)
+### Шаг 4. Реализация — ДЕЛЕГИРОВАТЬ агенту developer
 ```
-Agent(subagent_type="architect", prompt="Спроектируй [модуль]. Требования: [результат шага 2].")
+Agent(subagent_type="developer", prompt="Реализуй [модуль] по результатам анализа: [результат шага 2].")
 ```
-- Покажи план пользователю, дождись подтверждения
+- Проверь: код соответствует анализу?
 - Обнови checkpoint
 
-### Шаг 5. Reality check — ДЕЛЕГИРОВАТЬ агенту skeptic (только L)
+### Шаг 5. Тестирование — ДЕЛЕГИРОВАТЬ агенту tester
+```
+Agent(subagent_type="tester", prompt="Level: unit. Напиши тесты для [модуль]. Покрытие ≥80%. Запусти <%= testCommand %>.")
+```
+- Если тесты падают — верни developer'у
+- Обнови checkpoint
+
+### Шаг 6. Ревью — ДЕЛЕГИРОВАТЬ агенту reviewer
+```
+Agent(subagent_type="reviewer", prompt="Проверь код в [файлы]. Критерии: [AC IDs]. Раунд 1/3.")
+```
+- Если CRITICAL/HIGH — верни developer'у (макс 3 раунда)
+- Обнови checkpoint
+
+### Шаг 7. Tech-debt check
+Проверь отклонения. Зафиксируй в `dev-infra/memory/tech-debt.md`.
+
+### Шаг 8. Завершение
+- Обнови tasks.json, progress.md, active-context.md
+- Покажи итог
+- Предложи: `/complete-task`
+
+---
+
+## Пайплайн L (Large)
+
+### Шаг 2. Анализ требований — ДЕЛЕГИРОВАТЬ агенту analyst
+```
+Agent(subagent_type="analyst", prompt="Проанализируй задачу [ID]. Описание: [description].")
+```
+Покажи пользователю результат. Дождись подтверждения.
+
+### Шаг 3. Discovery (если есть вопросы)
+
+### Шаг 4. Проектирование + ревью плана — ПАРАЛЛЕЛЬНО
+```
+Agent(subagent_type="architect", prompt="Спроектируй [модуль]. Требования: [результат шага 2].")
+Agent(subagent_type="reviewer", prompt="Mode: plan_review. Проверь полноту плана: [результат шага 2]. Edge cases, архитектурная корректность.")
+```
+- Покажи оба результата пользователю
+- Если reviewer нашёл проблемы в плане — architect дорабатывает
+- Обнови checkpoint
+
+### Шаг 5. Reality check — ДЕЛЕГИРОВАТЬ агенту skeptic
 ```
 Agent(subagent_type="skeptic", prompt="Проверь план на реалистичность: [результат шага 4].")
 ```
 - Если FAIL — верни architect'у на доработку
 - Обнови checkpoint
 
-### Шаг 6. Реализация — ДЕЛЕГИРОВАТЬ агенту developer
+### Шаг 6. Реализация + тесты — per-feature циклы
+Для каждой фичи из плана:
 ```
-Agent(subagent_type="developer", prompt="Реализуй [модуль] по плану: [результат шага 4].")
+Agent(subagent_type="developer", prompt="Реализуй фичу [N]: [описание]. План: [контекст].")
+Agent(subagent_type="tester", prompt="Level: unit. Напиши тесты для фичи [N]. Запусти <%= testCommand %>.")
 ```
-- Проверь: код соответствует плану?
-- Обнови checkpoint
+- Если тесты падают — developer фиксит в рамках этой же фичи
+- Переходи к следующей фиче только после зелёных тестов
 
-### Шаг 7. Тестирование — ДЕЛЕГИРОВАТЬ агенту unit-tester
+### Шаг 7. Финальное ревью — ДЕЛЕГИРОВАТЬ агенту reviewer (до 3 раундов)
 ```
-Agent(subagent_type="unit-tester", prompt="Напиши тесты для [модуль]. Покрытие ≥80%. Запусти <%= testCommand %>.")
+Agent(subagent_type="reviewer", prompt="Финальное ревью. Файлы: [все изменённые]. Критерии: [AC IDs]. Раунд 1/3.")
 ```
-- Если тесты падают — верни developer'у
-- Обнови checkpoint
+- CRITICAL/HIGH → developer фиксит → reviewer проверяет (раунд 2/3)
+- После 3 раундов с нерешёнными CRITICAL → эскалация Team Lead
 
-### Шаг 8. Ревью — ДЕЛЕГИРОВАТЬ агенту reviewer (M, L)
-```
-Agent(subagent_type="reviewer", prompt="Проверь код в [файлы]. Критерии: [AC IDs].")
-```
-- Если CRITICAL/HIGH — верни developer'у
-- Обнови checkpoint
+### Шаг 8. Tech-debt check
+Проверь отклонения. Зафиксируй в `dev-infra/memory/tech-debt.md`.
 
-### Шаг 9. Smoke verification (только L)
-Запусти полный набор тестов:
-```bash
-<%= testCommand %>
-```
-Если тесты падают — разбери, верни developer'у.
-
-### Шаг 10. Документация — ДЕЛЕГИРОВАТЬ агенту doc-writer (только L)
-```
-Agent(subagent_type="doc-writer", prompt="Создай документацию для задачи [ID].")
-```
-
-### Шаг 11. Tech-debt check
-Проверь отклонения от целевой реализации. Если есть — зафиксируй в `dev-infra/memory/tech-debt.md`.
-
-### Шаг 12. Завершение
-- Покажи итог: что сделано, результат тестов, ревью
+### Шаг 9. Завершение
+- Обнови tasks.json, progress.md, active-context.md
+- Покажи итог
 - Предложи: `/complete-task`

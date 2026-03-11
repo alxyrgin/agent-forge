@@ -23,7 +23,7 @@ allowed-tools: Read, Write, Edit, Glob, Grep, Bash
 - **Тесты проходят?** Результат из шага 2
 - **Критерии приёмки?** Проверь выполнение
 
-## 4. Проверить технический долг
+## 4. Проверить технический долг (ОБЯЗАТЕЛЕН для всех размеров — S/M/L)
 - Mock-данные вместо реальных?
 - Упрощённая логика?
 - Workaround?
@@ -31,9 +31,11 @@ allowed-tools: Read, Write, Edit, Glob, Grep, Bash
 Если да — добавь запись в `dev-infra/memory/tech-debt.md`.
 
 ## 5. Обновить систему
-```
-Agent(subagent_type="progress-tracker", prompt="Задача [ID] завершена. Обнови tasks.json, progress.md, active-context.md.")
-```
+
+Team Lead обновляет напрямую:
+1. `dev-infra/tasks/tasks.json` — статус задачи → `done`, updated → сегодня
+2. `dev-infra/memory/progress.md` — пересчитать прогресс по milestone
+3. `dev-infra/memory/active-context.md` — обновить текущий контекст
 
 ## 6. Очистить checkpoint
 

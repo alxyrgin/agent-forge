@@ -7,26 +7,19 @@ const CORE_AGENTS = [
   'analyst',
   'architect',
   'developer',
-  'unit-tester',
+  'tester',
   'reviewer',
-  'security-auditor',
-  'doc-writer',
-  'progress-tracker',
   'skeptic',
+  'planner',
+  'writer',
 ];
 
-const EXTRA_AGENTS = [
-  'planner',
-  'integration-tester',
-  'acceptance-tester',
-  'completeness-validator',
-  'report-writer',
-];
+const EXTRA_AGENTS: string[] = [];
 
 const MINIMAL_AGENTS = [
   'analyst',
   'developer',
-  'unit-tester',
+  'tester',
   'reviewer',
 ];
 

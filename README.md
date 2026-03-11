@@ -12,7 +12,7 @@ npx @alxyrgin/agent-forge init
 
 This creates a full AI-driven development infrastructure in your project:
 
-- **`.claude/`** — CLAUDE.md (Team Lead instructions), 9-14 agents, 7-12 skills, 5 rules, hooks
+- **`.claude/`** — CLAUDE.md (Team Lead instructions), 4-8 agents, 7-12 skills, 5 rules, hooks
 - **`dev-infra/memory/`** — 9 Memory Bank files for persistent context (incl. checkpoint)
 - **`dev-infra/tasks/`** — Task tracking system (tasks.json)
 - **`dev-infra/sessions/`** — Session logs
@@ -47,24 +47,13 @@ Specialized AI agents, each with a specific role:
 | `analyst` | Requirement analysis from docs |
 | `architect` | Module architecture design |
 | `developer` | Code implementation |
-| `unit-tester` | Unit test writing and running |
-| `reviewer` | Code quality review |
-| `security-auditor` | Security and access control audit |
-| `doc-writer` | Documentation generation |
-| `progress-tracker` | Memory bank and task updates |
+| `tester` | Testing — unit, integration, acceptance, smoke (parametric `level`) |
+| `reviewer` | Code review with iterations, escalation, plan review, security audit |
 | `skeptic` | Reality checker — validates plans against actual codebase |
+| `planner` | Task planning, replanning, validation, completeness tracing |
+| `writer` | Documentation and stakeholder reports (parametric `mode`) |
 
-#### Extra agents (full preset only)
-
-| Agent | Role |
-|-------|------|
-| `planner` | Task planning and decomposition |
-| `integration-tester` | Integration test writing |
-| `acceptance-tester` | Acceptance criteria validation |
-| `completeness-validator` | Forward/backward requirement tracing |
-| `report-writer` | Non-technical progress reports |
-
-**Minimal preset** includes only: `analyst`, `developer`, `unit-tester`, `reviewer`
+**Minimal preset** includes only: `analyst`, `developer`, `tester`, `reviewer`
 
 ### Skills (Slash Commands)
 
@@ -96,9 +85,9 @@ Tasks are automatically classified and routed through the appropriate pipeline:
 
 | Size | Criteria | Steps |
 |------|----------|-------|
-| **S** | 1 file, < 50 lines | analyst → developer → unit-tester → fixation (4 steps) |
-| **M** | 2-5 files, new module | analyst → architect → developer → unit-tester → reviewer → fixation (6 steps) |
-| **L** | 6+ files, architecture changes | analyst → architect → skeptic → developer → unit-tester → reviewer → smoke → doc-writer → tech-debt → fixation (10 steps) |
+| **S** | 1 file, < 50 lines | developer → tester → tech-debt → fixation (4 steps) |
+| **M** | 2-5 files, new module | analyst → developer → tester → reviewer → tech-debt → fixation (6 steps) |
+| **L** | 6+ files, architecture changes | analyst → architect+reviewer(parallel) → skeptic → developer↔tester(cycles) → reviewer → tech-debt → fixation (7 steps) |
 
 ### Checkpoint System
 
@@ -129,9 +118,9 @@ The checkpoint system (`dev-infra/memory/checkpoint.yml`) enables recovery after
 
 ### Agent Presets
 
-- **Core** (default, 9 agents) — balanced set for most projects
-- **Full** (14 agents + extra skills) — adds planner, integration/acceptance testers, completeness validator, report writer, and 5 extra skills
-- **Minimal** (4 agents) — analyst, developer, unit-tester, reviewer
+- **Core** (default, 8 agents) — full set with parametric agents (tester, reviewer, writer, planner)
+- **Full** (8 agents + extra skills) — same agents as core, adds 5 extra skills (interview, audit-wave, write-report, dashboard, skill-master)
+- **Minimal** (4 agents) — analyst, developer, tester, reviewer
 
 ### Interactive Setup
 
@@ -179,12 +168,15 @@ your-project/
 │   ├── settings.json          # Claude Code hooks & env
 │   ├── hooks/
 │   │   └── protect-docs.sh    # PreToolUse hook
-│   ├── agents/                # 4-14 specialized agents
+│   ├── agents/                # 4-8 specialized agents
 │   │   ├── analyst.md
 │   │   ├── architect.md
 │   │   ├── skeptic.md
 │   │   ├── developer.md
-│   │   └── ...
+│   │   ├── tester.md
+│   │   ├── reviewer.md
+│   │   ├── planner.md
+│   │   └── writer.md
 │   ├── skills/                # 7-12 slash commands
 │   │   ├── start-session/SKILL.md
 │   │   ├── take-task/SKILL.md

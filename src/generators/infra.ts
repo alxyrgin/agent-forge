@@ -61,7 +61,7 @@ export async function generateInfra(
   // .claude-forge.json — manifest for doctor command
   try {
     const manifest = {
-      version: '2.0.0',
+      version: '2.1.0',
       createdAt: ctx.today,
       projectName: ctx.projectName,
       agentPreset: ctx.agentPreset,
@@ -131,11 +131,11 @@ function getExpectedFiles(ctx: ProjectContext): string[] {
 
   // Agents depend on preset
   const coreAgents = [
-    'analyst', 'architect', 'developer', 'unit-tester',
-    'reviewer', 'security-auditor', 'doc-writer', 'progress-tracker', 'skeptic',
+    'analyst', 'architect', 'developer', 'tester',
+    'reviewer', 'skeptic', 'planner', 'writer',
   ];
-  const minimalAgents = ['analyst', 'developer', 'unit-tester', 'reviewer'];
-  const extraAgents = ['planner', 'integration-tester', 'acceptance-tester', 'completeness-validator', 'report-writer'];
+  const minimalAgents = ['analyst', 'developer', 'tester', 'reviewer'];
+  const extraAgents: string[] = [];
 
   const agents = ctx.agentPreset === 'minimal'
     ? minimalAgents

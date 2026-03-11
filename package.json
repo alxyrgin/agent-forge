@@ -1,6 +1,6 @@
 {
   "name": "@alxyrgin/agent-forge",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "AI-driven Development Framework for Claude Code — scaffold Memory Bank, agents, skills, and rules in any project",
   "homepage": "https://github.com/alxyrgin/agent-forge#readme",
   "bugs": {

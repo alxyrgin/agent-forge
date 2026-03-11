@@ -1,5 +1,50 @@
 # Changelog
 
+## [2.1.0] - 2026-03-11
+
+### Changed
+
+**Agents — консолидация (14 → 8+):**
+- `unit-tester` → **`tester`** с параметром `level` (unit/integration/acceptance/smoke)
+- `doc-writer` + `report-writer` → **`writer`** с параметром `mode` (docs/report)
+- `planner` промоутнут из extra в **core** с новым режимом `completeness`
+- `reviewer` усилен: 3 раунда ревью, эскалация, режим `plan_review`, встроенная проверка безопасности (заменяет `security-auditor`)
+- `skeptic` переведён на модель opus (было sonnet)
+- Удалены: `security-auditor`, `progress-tracker`, `integration-tester`, `acceptance-tester`, `completeness-validator`, `report-writer`
+
+**Пресеты:**
+- minimal: 4 агента (analyst, developer, tester, reviewer)
+- core: 8 агентов (+ architect, skeptic, planner, writer)
+- full: 8 агентов (= core)
+
+**Feature-size routing — оптимизация пайплайнов:**
+- S-задачи: убран analyst (контекст очевиден) → developer → tester → tech-debt → фиксация (4 шага)
+- M-задачи: убран architect → analyst → developer → tester → reviewer → tech-debt → фиксация (6 шагов)
+- L-задачи: параллельность architect+reviewer(plan_review), per-feature циклы developer↔tester, reviewer до 3 раундов (7 шагов)
+- Tech-debt обязателен для ВСЕХ размеров (S/M/L)
+
+**Reviewer — усиление:**
+- Максимум 3 раунда ревью (не бесконечный цикл)
+- Категоризация: CRITICAL / HIGH / MEDIUM / LOW
+- Эскалация после 3 раундов с нерешёнными CRITICAL → Team Lead
+- Режим plan_review для параллельной проверки плана architect'а
+- Встроенная проверка безопасности (заменяет security-auditor)
+
+**Context Loading — усиление:**
+- Матрица контекста по агентам (что загрузить / что НЕ загружать)
+- Forward/backward tracing (требования ↔ код ↔ тесты)
+- Scope creep detection
+
+**Skills:**
+- `/take-task` — новая логика пайплайнов (S/M/L)
+- `/complete-task` — tech-debt обязателен, progress-tracker заменён на прямое обновление Team Lead
+- `/audit-wave` — использует planner(completeness), reviewer(security), tester(acceptance)
+- `/write-report` — использует writer(report) вместо report-writer
+- `/review` — reviewer с фокусом на безопасность вместо security-auditor
+
+### Removed
+- Агенты: `security-auditor`, `progress-tracker`, `unit-tester`, `doc-writer`, `integration-tester`, `acceptance-tester`, `completeness-validator`, `report-writer`
+
 ## [2.0.0] - 2026-03-07
 
 ### Added

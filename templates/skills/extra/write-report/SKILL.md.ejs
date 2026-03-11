@@ -8,10 +8,10 @@ allowed-tools: Read, Glob, Grep, Agent, Write
 
 # Сформировать отчёт для заказчика
 
-## Шаг 1. Делегировать report-writer
+## Шаг 1. Делегировать writer
 
 ```
-Agent(subagent_type="report-writer", prompt="Сформируй отчёт о прогрессе проекта. Источники: dev-infra/memory/progress.md, dev-infra/tasks/tasks.json, dev-infra/memory/active-context.md, dev-infra/memory/decisions.md, dev-infra/sessions/.")
+Agent(subagent_type="writer", prompt="Mode: report. Сформируй отчёт о прогрессе проекта. Источники: dev-infra/memory/progress.md, dev-infra/tasks/tasks.json, dev-infra/memory/active-context.md, dev-infra/memory/decisions.md, dev-infra/sessions/.")
 ```
 
 ## Шаг 2. Показать отчёт пользователю
