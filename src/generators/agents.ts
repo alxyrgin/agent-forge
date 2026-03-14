@@ -3,41 +3,107 @@ import type { ProjectContext, GeneratorResult, AgentPreset } from '../types.js';
 import { renderTemplate } from '../utils/template.js';
 import { writeFileSafe } from '../utils/fs.js';
 
-const CORE_AGENTS = [
+// --- Agent categories ---
+
+const PIPELINE_AGENTS = [
   'analyst',
   'architect',
+  'skeptic',
   'developer',
   'tester',
+  'inspector',
   'reviewer',
-  'skeptic',
   'planner',
-  'writer',
 ];
 
-const EXTRA_AGENTS: string[] = [];
+const PLANNING_AGENTS = [
+  'researcher',
+  'validator',
+  'interviewer',
+  'decomposer',
+];
+
+const SECURITY_AGENTS = [
+  'auditor',
+  'prompter',
+  'deployer',
+  'scaffolder',
+];
+
+const DOCUMENTATION_AGENTS = [
+  'librarian',
+  'writer',
+  'gatekeeper',
+  'verifier',
+];
+
+// --- Presets ---
 
 const MINIMAL_AGENTS = [
   'analyst',
   'developer',
   'tester',
   'reviewer',
+  'inspector',
 ];
 
-function getAgentList(preset: AgentPreset): { name: string; dir: string }[] {
-  const agents: { name: string; dir: string }[] = [];
+const CORE_AGENTS = [...PIPELINE_AGENTS];
 
-  const coreList = preset === 'minimal' ? MINIMAL_AGENTS : CORE_AGENTS;
-  for (const name of coreList) {
-    agents.push({ name, dir: 'core' });
+const FULL_AGENTS = [
+  ...PIPELINE_AGENTS,
+  ...PLANNING_AGENTS,
+  ...SECURITY_AGENTS,
+  ...DOCUMENTATION_AGENTS,
+];
+
+// --- Helpers ---
+
+const CATEGORY_MAP: Record<string, string> = {};
+
+for (const name of PIPELINE_AGENTS) {
+  CATEGORY_MAP[name] = 'pipeline';
+}
+for (const name of PLANNING_AGENTS) {
+  CATEGORY_MAP[name] = 'planning';
+}
+for (const name of SECURITY_AGENTS) {
+  CATEGORY_MAP[name] = 'security';
+}
+for (const name of DOCUMENTATION_AGENTS) {
+  CATEGORY_MAP[name] = 'documentation';
+}
+
+/**
+ * Returns the template subdirectory for a given agent name.
+ * Templates live at templates/agents/[category]/[name].md.ejs
+ */
+export function getAgentCategory(name: string): string {
+  return CATEGORY_MAP[name] || 'pipeline';
+}
+
+/**
+ * Returns the list of agents for the given preset.
+ */
+export function getAgentList(preset: AgentPreset): { name: string; category: string }[] {
+  let names: string[];
+
+  switch (preset) {
+    case 'minimal':
+      names = MINIMAL_AGENTS;
+      break;
+    case 'full':
+      names = FULL_AGENTS;
+      break;
+    case 'core':
+    default:
+      names = CORE_AGENTS;
+      break;
   }
 
-  if (preset === 'full') {
-    for (const name of EXTRA_AGENTS) {
-      agents.push({ name, dir: 'extra' });
-    }
-  }
-
-  return agents;
+  return names.map((name) => ({
+    name,
+    category: getAgentCategory(name),
+  }));
 }
 
 export async function generateAgents(
@@ -59,9 +125,10 @@ export async function generateAgents(
   for (const agent of agents) {
     try {
       const content = await renderTemplate(
-        `agents/${agent.dir}/${agent.name}.md.ejs`,
+        `agents/${agent.category}/${agent.name}.md.ejs`,
         templateData
       );
+      // Output is always flat: .claude/agents/[name].md
       const outputPath = path.join(ctx.targetDir, '.claude/agents', `${agent.name}.md`);
       const status = await writeFileSafe(outputPath, content, overwrite);
 

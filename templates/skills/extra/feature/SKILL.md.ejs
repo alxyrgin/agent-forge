@@ -1,0 +1,83 @@
+---
+name: feature
+description: |
+  Wave-execution: оркестрация нескольких задач из milestone по волнам.
+  Последовательно выполняет задачи через take-task pipeline.
+
+  Use when: «запусти фичу», «выполни волну», «feature», «wave execution», «запусти wave»
+user-invocable: true
+argument-hint: "[milestone] [--wave N]"
+allowed-tools: Read, Write, Edit, Glob, Grep, Bash, Agent
+---
+
+# Wave Execution — оркестрация волны задач
+
+Аргументы: `$ARGUMENTS`
+- milestone — ID milestone (например: 1.2)
+- --wave N — номер волны (по умолчанию — следующая невыполненная)
+
+## Фаза 1. Выбор задач
+
+1. Прочитай `dev-infra/tasks/tasks.json`
+2. Если --wave указан — выбери задачи с `wave: N` и `status: todo`
+3. Если нет — определи следующую невыполненную волну:
+   - Wave 1 done? -> Wave 2
+   - Wave 2 done? -> Wave 3
+4. Покажи задачи волны:
+
+```
+## Wave [N] — Milestone [X.X]
+
+| # | ID | Название | Priority | Dependencies | Status |
+|---|----|-----------|---------|--------------| -------|
+| 1 | M1.2-001 | ... | high | - | todo |
+| 2 | M1.2-002 | ... | high | - | todo |
+
+Задач: N. Запустить выполнение?
+```
+
+**Checkpoint:** волна определена.
+
+## Фаза 2. Последовательное выполнение
+
+Для каждой задачи в волне (по порядку ID):
+
+```
+# Эквивалент /take-task pipeline
+1. Определить размер задачи (S/M/L)
+2. Запустить соответствующий пайплайн (см. take-task)
+3. Дождаться завершения
+4. Обновить checkpoint
+```
+
+Между задачами показывай прогресс:
+```
+Wave [N]: [completed]/[total] задач выполнено.
+Следующая: [ID] — [название]
+```
+
+**Checkpoint:** обновляется после каждой задачи.
+
+## Фаза 3. Финализация волны
+
+После завершения всех задач:
+
+1. Smoke test: `<%= testCommand %>`
+2. Обнови progress.md
+3. Покажи итог:
+
+```
+## Wave [N] Complete
+
+- Задач выполнено: N/N
+- Тесты: X passed, Y failed
+- Следующая волна: Wave [N+1] (K задач)
+```
+
+4. Предложи коммит
+
+## Final Check
+
+- [ ] Все задачи волны в статусе done
+- [ ] Smoke test проходит
+- [ ] Progress обновлён

@@ -1,0 +1,66 @@
+---
+name: done
+description: |
+  Финализация фичи: обновление документации, архивация, коммит.
+
+  Use when: «фича готова», «finalize», «done», «завершить фичу», «финализируй фичу»
+user-invocable: true
+argument-hint: "[feature-name or milestone]"
+allowed-tools: Read, Write, Edit, Glob, Grep, Bash, Agent
+---
+
+# Финализация фичи
+
+Аргумент: `$ARGUMENTS` — название фичи или milestone.
+
+## Фаза 1. Проверка состояния
+
+1. Прочитай tasks.json — все задачи фичи в статусе done?
+2. Прочитай progress.md — прогресс актуален?
+3. Прочитай tech-debt.md — есть ли незакрытый TD?
+
+Если есть незавершённые задачи — показать список, спросить.
+
+**Checkpoint:** состояние проверено.
+
+## Фаза 2. Документация
+
+```
+Agent(subagent_type="librarian", prompt="
+Проверь документацию для [фича/milestone]:
+- Memory bank актуален?
+- Progress обновлён?
+- Active-context актуален?
+- Нет устаревших ссылок?
+")
+```
+
+Если OUTDATED — обновить необходимые файлы.
+
+**Checkpoint:** документация проверена.
+
+## Фаза 3. Обновление PK Files
+
+Обнови:
+- `dev-infra/memory/progress.md` — итоговый прогресс
+- `dev-infra/memory/active-context.md` — убрать завершённые задачи
+- `dev-infra/memory/tech-debt.md` — закрыть resolved TD
+
+## Фаза 4. Завершение
+
+```
+## Фича [название] финализирована
+
+- Задач завершено: N
+- Tech-debt: K open, M resolved
+- Документация: актуальна
+```
+
+Предложи коммит.
+
+## Final Check
+
+- [ ] Все задачи done
+- [ ] Документация актуальна
+- [ ] PK files обновлены
+- [ ] Коммит предложен

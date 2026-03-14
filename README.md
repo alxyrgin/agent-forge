@@ -12,7 +12,7 @@ npx @alxyrgin/agent-forge init
 
 This creates a full AI-driven development infrastructure in your project:
 
-- **`.claude/`** — CLAUDE.md (Team Lead instructions), 4-8 agents, 7-12 skills, 5 rules, hooks
+- **`.claude/`** — CLAUDE.md (Team Lead instructions), 5-20 agents, 10-21 skills, 8 rules, hooks
 - **`dev-infra/memory/`** — 9 Memory Bank files for persistent context (incl. checkpoint)
 - **`dev-infra/tasks/`** — Task tracking system (tasks.json)
 - **`dev-infra/sessions/`** — Session logs
@@ -38,26 +38,23 @@ This creates a full AI-driven development infrastructure in your project:
 
 ### Agents
 
-Specialized AI agents, each with a specific role:
+20 specialized AI agents organized in 4 categories:
 
-#### Core agents (all presets except minimal)
+| Category | Agents | Count |
+|----------|--------|-------|
+| Pipeline | analyst, architect, skeptic, developer, tester, inspector, reviewer, planner | 8 |
+| Planning | researcher, validator, interviewer, decomposer | 4 |
+| Security | auditor, prompter, deployer, scaffolder | 4 |
+| Documentation | librarian, writer, gatekeeper, verifier | 4 |
 
-| Agent | Role |
-|-------|------|
-| `analyst` | Requirement analysis from docs |
-| `architect` | Module architecture design |
-| `developer` | Code implementation |
-| `tester` | Testing — unit, integration, acceptance, smoke (parametric `level`) |
-| `reviewer` | Code review with iterations, escalation, plan review, security audit |
-| `skeptic` | Reality checker — validates plans against actual codebase |
-| `planner` | Task planning, replanning, validation, completeness tracing |
-| `writer` | Documentation and stakeholder reports (parametric `mode`) |
-
-**Minimal preset** includes only: `analyst`, `developer`, `tester`, `reviewer`
+**Preset coverage:**
+- **minimal** (5 agents) — analyst, developer, tester, inspector, reviewer
+- **core** (8 agents) — full pipeline category
+- **full** (20 agents) — all categories
 
 ### Skills (Slash Commands)
 
-#### Core skills (all presets)
+#### Core skills (all presets) — 10
 
 | Command | Description |
 |---------|-------------|
@@ -68,8 +65,11 @@ Specialized AI agents, each with a specific role:
 | `/status` | Show project status, deadlines, blockers |
 | `/plan [mode]` | Plan/replan/validate tasks from documentation |
 | `/review [file]` | Code review for file or task |
+| `/code [task]` | Direct code generation for a specific task |
+| `/test [target]` | Run or generate tests for a target |
+| `/done [id]` | Quick-complete a task with minimal ceremony |
 
-#### Extra skills (full preset only)
+#### Extra skills (full preset only) — 11
 
 | Command | Description |
 |---------|-------------|
@@ -78,6 +78,12 @@ Specialized AI agents, each with a specific role:
 | `/write-report` | Generate non-technical progress report for stakeholders |
 | `/dashboard` | Project dashboard: progress, health, tech debt, activity |
 | `/skill-master [name]` | Create a new custom skill from template |
+| `/decompose [task]` | Break down a task into subtasks |
+| `/feature [name]` | Scaffold a new feature end-to-end |
+| `/security [target]` | Run security analysis on a target |
+| `/spec [feature]` | Generate specification for a feature |
+| `/techspec [module]` | Generate technical specification for a module |
+| `/prompts [agent]` | Manage and optimize agent prompts |
 
 ### Feature-size Routing
 
@@ -85,9 +91,9 @@ Tasks are automatically classified and routed through the appropriate pipeline:
 
 | Size | Criteria | Steps |
 |------|----------|-------|
-| **S** | 1 file, < 50 lines | developer → tester → tech-debt → fixation (4 steps) |
-| **M** | 2-5 files, new module | analyst → developer → tester → reviewer → tech-debt → fixation (6 steps) |
-| **L** | 6+ files, architecture changes | analyst → architect+reviewer(parallel) → skeptic → developer↔tester(cycles) → reviewer → tech-debt → fixation (7 steps) |
+| **S** | 1 file, < 50 lines | checkpoint → code → tester+inspector → quick-review → tech-debt → fixation (6 steps) |
+| **M** | 2-5 files, new module | checkpoint → analysis → TDD(RED) → code+tester+inspector → review → tech-debt → fixation (8 steps) |
+| **L** | 6+ files, architecture changes | full cycle with architect, skeptic, per-feature loops, inspector, multi-round review (10 steps) |
 
 ### Checkpoint System
 
@@ -104,7 +110,7 @@ The checkpoint system (`dev-infra/memory/checkpoint.yml`) enables recovery after
 
 ### Rules
 
-5 development standards enforced automatically:
+8 development standards enforced automatically:
 
 | Rule | Purpose |
 |------|---------|
@@ -113,14 +119,19 @@ The checkpoint system (`dev-infra/memory/checkpoint.yml`) enables recovery after
 | `testing-standards` | Test coverage and quality requirements |
 | `shared-resources` | Singleton resource registry and patterns |
 | `context-loading` | Just-in-time context loading, anti-patterns |
+| `agent-output-format` | JSON output standard for all agents |
+| `quality-gates` | Verdict-based routing and quality checkpoints |
+| `rollback-protocol` | Rollback procedures for failed deployments |
 
 ## Configuration
 
 ### Agent Presets
 
-- **Core** (default, 8 agents) — full set with parametric agents (tester, reviewer, writer, planner)
-- **Full** (8 agents + extra skills) — same agents as core, adds 5 extra skills (interview, audit-wave, write-report, dashboard, skill-master)
-- **Minimal** (4 agents) — analyst, developer, tester, reviewer
+| Preset | Agents | Skills | Description |
+|--------|--------|--------|-------------|
+| **minimal** | 5 | 10 | Essentials + inspector |
+| **core** (default) | 8 | 10 | Full development pipeline |
+| **full** | 20 | 21 | All categories + extra skills |
 
 ### Interactive Setup
 
@@ -168,25 +179,25 @@ your-project/
 │   ├── settings.json          # Claude Code hooks & env
 │   ├── hooks/
 │   │   └── protect-docs.sh    # PreToolUse hook
-│   ├── agents/                # 4-8 specialized agents
-│   │   ├── analyst.md
-│   │   ├── architect.md
-│   │   ├── skeptic.md
-│   │   ├── developer.md
-│   │   ├── tester.md
-│   │   ├── reviewer.md
-│   │   ├── planner.md
-│   │   └── writer.md
-│   ├── skills/                # 7-12 slash commands
+│   ├── agents/                # 5-20 specialized agents (4 categories)
+│   │   ├── pipeline/          # analyst, architect, skeptic, developer,
+│   │   │                      # tester, inspector, reviewer, planner
+│   │   ├── planning/          # researcher, validator, interviewer, decomposer
+│   │   ├── security/          # auditor, prompter, deployer, scaffolder
+│   │   └── documentation/     # librarian, writer, gatekeeper, verifier
+│   ├── skills/                # 10-21 slash commands
 │   │   ├── start-session/SKILL.md
 │   │   ├── take-task/SKILL.md
 │   │   └── ...
-│   └── rules/                 # 5 development standards
+│   └── rules/                 # 8 development standards
 │       ├── commit-conventions.md
 │       ├── development-cycle.md
 │       ├── testing-standards.md
 │       ├── shared-resources.md
-│       └── context-loading.md
+│       ├── context-loading.md
+│       ├── agent-output-format.md
+│       ├── quality-gates.md
+│       └── rollback-protocol.md
 ├── dev-infra/
 │   ├── memory/                # 9 Memory Bank files
 │   │   ├── active-context.md

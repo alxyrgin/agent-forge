@@ -1,0 +1,80 @@
+# Стандарт вывода агентов
+
+Все агенты возвращают результат в двойном формате: JSON-блок + Markdown-пояснение.
+
+## Обязательные поля JSON
+
+Каждый агент начинает ответ с JSON-блока:
+
+```json
+{
+  "agent": "имя агента",
+  "task_id": "ID задачи или null",
+  "timestamp": "ISO-8601",
+  "verdict": "вердикт (зависит от агента)",
+  "summary": "1-2 предложения — ключевой результат",
+  "details": { ... }
+}
+```
+
+После JSON — Markdown с развёрнутым описанием.
+
+## Вердикты по агентам
+
+| Агент | Допустимые вердикты | Когда какой |
+|-------|---------------------|-------------|
+| analyst | COMPLETE, NEEDS_DISCOVERY | COMPLETE — все требования найдены. NEEDS_DISCOVERY — есть неясности, нужны вопросы пользователю |
+| architect | READY, NEEDS_INPUT | READY — план готов к ревью. NEEDS_INPUT — недостаточно данных |
+| skeptic | PASS, PASS_WITH_WARNINGS, FAIL | PASS — миражей нет. PASS_WITH_WARNINGS — есть medium/low. FAIL — есть high, блокирует |
+| developer | DONE, BLOCKED | DONE — код написан, файлы перечислены. BLOCKED — не может продолжить (указать причину) |
+| tester | PASS, FAIL | PASS — все тесты проходят, покрытие >=80%. FAIL — есть падающие тесты |
+| inspector | APPROVE, REQUEST_CHANGES | APPROVE — качество тестов приемлемо. REQUEST_CHANGES — нужны доработки |
+| reviewer | APPROVE, REQUEST_CHANGES, ESCALATE | APPROVE — код готов. REQUEST_CHANGES — есть CRITICAL/HIGH. ESCALATE — 3 раунда, нерешённые CRITICAL |
+| planner | HEALTHY, ATTENTION, CRITICAL | HEALTHY — план в порядке. ATTENTION — есть проблемы. CRITICAL — блокеры |
+| writer | DONE | DONE — документ сформирован |
+
+## Поле details
+
+Содержимое `details` зависит от агента. Примеры:
+
+**analyst:**
+```json
+"details": {
+  "requirements": ["req-1", "req-2"],
+  "acceptance_criteria": ["AC-1.1-01"],
+  "risks": ["R-011"],
+  "questions": ["Вопрос 1?"]
+}
+```
+
+**reviewer:**
+```json
+"details": {
+  "round": 1,
+  "findings": {
+    "critical": 0, "high": 1, "medium": 2, "low": 1
+  },
+  "issues": [
+    {"severity": "high", "file": "<%= srcDir %>module/x.ts", "line": 42, "description": "...", "fix": "..."}
+  ]
+}
+```
+
+**developer:**
+```json
+"details": {
+  "files_created": ["<%= srcDir %>module/new.ts"],
+  "files_modified": ["<%= srcDir %>module/existing.ts"],
+  "decisions": ["Решение и почему"],
+  "warnings": ["Предупреждение — см. TD-001"]
+}
+```
+
+## Правила
+
+1. JSON-блок — первым в ответе, до любого Markdown
+2. `verdict` — обязательное поле, Team Lead использует его для маршрутизации пайплайна
+3. `summary` — краткий, на русском языке
+4. `details` — структурированные данные, специфичные для агента
+5. После JSON следует развёрнутый Markdown-отчёт (привычный формат)
+6. Если агент не может определить verdict — использовать наиболее консервативный вариант

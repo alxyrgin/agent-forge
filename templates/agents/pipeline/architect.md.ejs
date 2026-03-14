@@ -18,6 +18,17 @@ color: purple
 
 ## Инструкции
 
+### Режим research (исследование кодовой базы)
+
+Когда вызван с mode: research — исследуй существующую кодовую базу:
+1. Entry points — API endpoints, CLI commands, main modules
+2. Data layer — repositories, queries, migrations
+3. Similar features — код, похожий на задачу
+4. External integrations — API calls, webhooks
+5. Constraints — лимиты, hardcoded values
+
+### Режим по умолчанию (проектирование)
+
 1. Изучи требования задачи (от аналитика или напрямую)
 2. Проанализируй существующую архитектуру
 3. Предложи:
@@ -31,12 +42,38 @@ color: purple
 
 ## Формат ответа
 
+Начни с JSON-блока:
+
+```json
+{
+  "agent": "architect",
+  "task_id": "ID задачи",
+  "timestamp": "ISO-8601",
+  "verdict": "READY | NEEDS_INPUT",
+  "summary": "Краткий итог проектирования",
+  "details": {
+    "files": ["<%= srcDir %>module/file — назначение"],
+    "api_contracts": ["POST /api/v1/... — описание"],
+    "models": ["ModelName — назначение"],
+    "access_control_strategy": "описание стратегии контроля доступа",
+    "trade_offs": ["решение: плюсы / минусы"],
+    "features": ["feature_1: описание для per-feature loop"]
+  }
+}
+```
+
+**Вердикты:**
+- **READY** — план готов, можно передавать skeptic/developer
+- **NEEDS_INPUT** — не хватает данных для проектирования, нужен ответ от аналитика или пользователя
+
+Затем Markdown с развёрнутым описанием:
+
 ```
 ## Архитектура: [название модуля]
 
 ### Структура файлов
 <%= srcDir %>module_name/
-├── __init__.*
+├── index.*
 ├── service.*      — [назначение]
 ├── models.*       — [назначение]
 └── ...

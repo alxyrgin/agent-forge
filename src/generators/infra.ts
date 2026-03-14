@@ -61,7 +61,7 @@ export async function generateInfra(
   // .claude-forge.json — manifest for doctor command
   try {
     const manifest = {
-      version: '2.1.0',
+      version: '3.0.0',
       createdAt: ctx.today,
       projectName: ctx.projectName,
       agentPreset: ctx.agentPreset,
@@ -107,21 +107,28 @@ function getExpectedFiles(ctx: ProjectContext): string[] {
   // Hooks
   files.push('.claude/hooks/protect-docs.sh');
 
-  // Rules
+  // Rules (8 total)
   files.push(
     '.claude/rules/commit-conventions.md',
     '.claude/rules/development-cycle.md',
     '.claude/rules/testing-standards.md',
     '.claude/rules/shared-resources.md',
     '.claude/rules/context-loading.md',
+    '.claude/rules/agent-output-format.md',
+    '.claude/rules/quality-gates.md',
+    '.claude/rules/rollback-protocol.md',
   );
 
-  // Skills
+  // Skills (10 core + 11 extra for full)
   const coreSkills = [
     'start-session', 'end-session', 'take-task',
     'complete-task', 'status', 'plan', 'review',
+    'code', 'test', 'done',
   ];
-  const extraSkills = ['interview', 'audit-wave', 'write-report', 'dashboard', 'skill-master'];
+  const extraSkills = [
+    'interview', 'audit-wave', 'write-report', 'dashboard', 'skill-master',
+    'decompose', 'feature', 'security', 'spec', 'techspec', 'prompts',
+  ];
   const skills = ctx.agentPreset === 'full'
     ? [...coreSkills, ...extraSkills]
     : coreSkills;
@@ -130,17 +137,28 @@ function getExpectedFiles(ctx: ProjectContext): string[] {
   }
 
   // Agents depend on preset
-  const coreAgents = [
-    'analyst', 'architect', 'developer', 'tester',
-    'reviewer', 'skeptic', 'planner', 'writer',
+  const pipelineAgents = [
+    'analyst', 'architect', 'skeptic', 'developer',
+    'tester', 'inspector', 'reviewer', 'planner',
   ];
-  const minimalAgents = ['analyst', 'developer', 'tester', 'reviewer'];
-  const extraAgents: string[] = [];
+  const planningAgents = ['researcher', 'validator', 'interviewer', 'decomposer'];
+  const securityAgents = ['auditor', 'prompter', 'deployer', 'scaffolder'];
+  const documentationAgents = ['librarian', 'writer', 'gatekeeper', 'verifier'];
+
+  const minimalAgents = ['analyst', 'developer', 'tester', 'reviewer', 'inspector'];
+
+  const coreAgents = [...pipelineAgents];
+  const fullAgents = [
+    ...pipelineAgents,
+    ...planningAgents,
+    ...securityAgents,
+    ...documentationAgents,
+  ];
 
   const agents = ctx.agentPreset === 'minimal'
     ? minimalAgents
     : ctx.agentPreset === 'full'
-    ? [...coreAgents, ...extraAgents]
+    ? fullAgents
     : coreAgents;
 
   for (const agent of agents) {

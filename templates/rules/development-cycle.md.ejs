@@ -2,119 +2,187 @@
 
 ## Главное правило
 
-При `/take-task` запускается **автоматический цикл**. Сначала определи feature-size, затем запускай соответствующий пайплайн.
+При `/take-task` запускается автоматический цикл. Агенты вызываются по порядку. Пользователь подтверждает только ключевые решения (план, архитектура). Маршрутизация — по verdict каждого агента (см. quality-gates.md).
 
 ## Feature-size маршрутизация
 
 | Размер | Критерии | Шаги |
 |--------|----------|------|
-| **S** | 1 файл, < 50 строк, нет новых зависимостей | developer → tester → tech-debt → фиксация (4) |
-| **M** | 2-5 файлов, новый модуль/компонент | analyst → developer → tester → reviewer → tech-debt → фиксация (6) |
-| **L** | 6+ файлов, архитектурные изменения | analyst → architect+reviewer(parallel) → skeptic → developer↔tester(cycles) → reviewer → tech-debt → фиксация (7) |
+| **S** | 1-2 файла, фикс, конфиг | 6 шагов |
+| **M** | 3-5 файлов, новая функция | 8 шагов |
+| **L** | >5 файлов, новый модуль | 10 шагов |
 
-## Пайплайн S (Small)
+## S-pipeline (6 шагов)
+
+```
+[0] CHECKPOINT
+[1] КОД ─────── developer
+[2] ТЕСТЫ ───── tester(unit) → inspector
+[3] QUICK REVIEW ── reviewer(mode: quick, 1 раунд)
+[4] TECH-DEBT
+[5] ФИКСАЦИЯ
+```
+
+S-задачи теперь включают quick review (security + контроль доступа + critical bugs) и inspector после тестов.
+
+## M-pipeline (8 шагов)
+
+```
+[0] CHECKPOINT
+[1] АНАЛИЗ ──── analyst
+[2] TDD (RED) ── tester(mode: tdd) — failing тесты по tdd_anchors
+[3] КОД + ТЕСТЫ (GREEN) ── developer → tester(unit) → inspector (per-feature)
+[4] РЕВЬЮ ───── reviewer (full, макс. 3 раунда)
+[5] TECH-DEBT
+[6] ФИКСАЦИЯ
+```
+
+M-задачи включают TDD-якоря: сначала failing тесты, потом код.
+
+## L-pipeline (10 шагов)
 
 ```
 /take-task [ID]
      │
      ▼
-[1]  КОД ─────────  агент developer
-     │              Контекст очевиден, пишет код сразу
+[0] CHECKPOINT ─── проверить checkpoint.yml
+     │              Если active → предложить восстановление
+     │              Обновить: active=true, task_id, started_at
+     │              ✎ checkpoint
      ▼
-[2]  ТЕСТЫ ────── агент tester (level: unit)
-     │              Покрытие ≥80%, запуск <%= testCommand %>
+[1] АНАЛИЗ ─────── Agent(analyst)
+     │              → JSON с verdict COMPLETE/NEEDS_DISCOVERY
+     │              Gate: NEEDS_DISCOVERY → discovery → retry
+     │              ✎ checkpoint: steps.analysis = {status, verdict, key_findings}
      ▼
-[3]  TECH-DEBT ── проверить отклонения
-     │              Зафиксировать в tech-debt.md
+[2] АРХИТЕКТУРА ── Параллельно:
+     │              Agent(architect) → план
+     │              Agent(reviewer, mode: plan_review) → второе мнение
+     │              Gate: оба READY/APPROVE → next
+     │              Gate: конфликт → architect исправляет → retry
+     │              Пользователь подтверждает план
+     │              ✎ checkpoint: steps.architecture = {status, plan_summary, files}
      ▼
-[4]  ФИКСАЦИЯ ── обновить tasks.json, progress.md
-                   Предложить коммит
-```
-
-## Пайплайн M (Medium)
-
-```
-/take-task [ID]
+[3] REALITY CHECK ─ Agent(skeptic) → mirage detection
+     │              Gate: PASS → next
+     │              Gate: PASS_WITH_WARNINGS → developer получит warnings
+     │              Gate: FAIL → вернуть architect
+     │              ✎ checkpoint: steps.skeptic = {status, verdict, warnings}
+     ▼
+[4] TDD + КОД + ТЕСТЫ ── per-feature цикл:
      │
+     │   Для каждой фичи в плане architect:
+     │   ┌─────────────────────────────────────────────┐
+     │   │ 4a. Agent(tester, mode: tdd) → failing tests│
+     │   │     по tdd_anchors из tasks.json             │
+     │   │ 4b. Agent(developer) → реализация            │
+     │   │ 4c. Agent(tester, level: unit) → GREEN check │
+     │   │     + edge cases сверх якорей               │
+     │   │ 4d. Agent(inspector) → качество тестов       │
+     │   │     Gate: REQUEST_CHANGES → tester fixes     │
+     │   └─────────────────────────────────────────────┘
+     │   Порядок фич — по зависимостям из плана architect
+     │   Покрытие ≥80% на выходе из цикла
+     │   ✎ checkpoint: steps.developer = {status, files_changed, files_remaining}
      ▼
-[1]  АНАЛИЗ ────── агент analyst
-     │              Читает документацию, критерии, ПМИ
-     │              ↳ Discovery: если есть неясности — вопросы → решения
+[5] РЕВЬЮ ─────── Agent(reviewer, max 3 rounds)
+     │              + проверка контроля доступа (check_security: true)
+     │              Gate: APPROVE → next
+     │              Gate: REQUEST_CHANGES → developer fixes → re-review
+     │              Gate: ESCALATE (round 3) → пользователь решает
+     │              ✎ checkpoint: steps.review = {status, round, findings_count}
      ▼
-[2]  КОД ─────────  агент developer
-     │              Пишет код по результатам анализа
+[6] TECH-DEBT ──── Team Lead проверяет 3 источника:
+     │              1. Reviewer findings (MEDIUM/LOW не исправленные)
+     │              2. Implementation deviations (mock, simplified, workaround)
+     │              3. Skeptic warnings (не адресованные в коде)
+     │              Если найдено → TD-NNN в tech-debt.md
+     │              Если нет → tech_debt: none в checkpoint
      ▼
-[3]  ТЕСТЫ ────── агент tester (level: unit)
-     │              Покрытие ≥80%, запуск <%= testCommand %>
-     ▼
-[4]  РЕВЬЮ ────── агент reviewer
-     │              Безопасность, качество, соответствие
-     ▼
-[5]  TECH-DEBT ── проверить отклонения
-     │              Зафиксировать в tech-debt.md
-     ▼
-[6]  ФИКСАЦИЯ ── обновить tasks.json, progress.md
+[7] ФИКСАЦИЯ ──── tasks.json(done), progress.md, active-context.md
+                   checkpoint.yml(active: false)
                    Предложить коммит
 ```
-
-## Пайплайн L (Large)
-
-```
-/take-task [ID]
-     │
-     ▼
-[1]  АНАЛИЗ ────── агент analyst
-     │              Читает документацию, критерии, ПМИ
-     │              ↳ Discovery: если есть неясности — вопросы → решения
-     ▼
-[2]  ПЛАН ──────── агент architect + агент reviewer (mode: plan_review) — ПАРАЛЛЕЛЬНО
-     │              architect проектирует, reviewer проверяет план (second opinion)
-     ▼
-[3]  REALITY ───── агент skeptic
-     │              Проверяет план на «миражи»
-     ▼
-[4]  КОД+ТЕСТЫ ── циклы developer ↔ tester (per-feature)
-     │              Для каждой фичи: developer пишет → tester проверяет → фиксит → дальше
-     │              Быстрый feedback вместо «весь код → все тесты»
-     ▼
-[5]  РЕВЬЮ ────── агент reviewer (финальный, до 3 раундов)
-     │              CRITICAL/HIGH → developer фиксит → reviewer проверяет (макс 3 раунда)
-     ▼
-[6]  TECH-DEBT ── проверить отклонения
-     │              Зафиксировать в tech-debt.md
-     ▼
-[7]  ФИКСАЦИЯ ── обновить tasks.json, progress.md
-                   Предложить коммит
-```
-
-### Ключевые изменения L-пайплайна
-
-- **Параллельность:** architect и reviewer (plan_review) работают одновременно
-- **Per-feature циклы:** developer↔tester — цикл для каждой фичи (быстрый feedback)
-- **Smoke встроен в tester:** отдельный шаг убран, tester с `level: smoke` при необходимости
-- **Tech-debt обязателен для ВСЕХ размеров** (S/M/L)
 
 ## Checkpoint
 
-При каждом переходе между шагами обнови `dev-infra/memory/checkpoint.yml`:
-- `current_step` и `step_name`
-- `context` — ключевые результаты
-- При завершении — `active: false`
+Файл `dev-infra/memory/checkpoint.yml` обновляется после КАЖДОГО шага (символ ✎).
 
-## Когда пропускать шаги
+Формат checkpoint:
+```yaml
+active: true
+task_id: TASK-XXX
+task_title: Название
+feature_size: S|M|L
+current_step: analysis|architecture|skeptic|developer|review|tech_debt|finalize
+started_at: ISO-8601
+steps:
+  analysis: {status: done, verdict: COMPLETE}
+  architecture: {status: done, plan_summary: "...", files: [...]}
+  skeptic: {status: done, verdict: PASS_WITH_WARNINGS, warnings: [...]}
+  developer: {status: in_progress, files_changed: [...], features_done: 2, features_total: 4}
+  review: {status: pending}
+  tech_debt: {status: pending}
+```
 
-| Тип задачи | Пропустить |
-|------------|-----------|
-| Анализ / изучение | шаги код, тесты, ревью (нет кода) |
-| Мелкий фикс (S) | analyst, architect, skeptic не нужны |
-| Тестирование | architect, developer не нужны |
-| Документация | architect, developer, tester не нужны |
-| Новый модуль (L) | выполнить ВСЕ шаги |
+## Таблица пропуска шагов
 
-## Discovery-интервью
+| Размер | Выполняются | Пропускаются |
+|--------|------------|--------------|
+| **S (6)** | [0] checkpoint, [1] код, [2] тесты+inspector, [3] quick-review, [4] tech-debt, [5] фиксация | анализ, архитектура, skeptic |
+| **M (8)** | [0] checkpoint, [1] анализ, [2] TDD(RED), [3] код+тесты+inspector, [4] ревью(full), [5] tech-debt, [6] фиксация | архитектура параллельная, skeptic |
+| **L (10)** | ВСЕ шаги | Ничего |
 
-Если требование неясно — **не додумывай**:
+Шаг 0 (checkpoint) и tech-debt выполняются ВСЕГДА.
+
+## Per-feature loop
+
+Формализованный цикл для шага «Код + Тесты»:
+
+1. Architect предоставляет список фич с порядком (по зависимостям)
+2. Для каждой фичи выполняется полный мини-цикл: tdd(RED) → developer → tester(GREEN) → inspector
+3. При FAIL на любом этапе — откат к developer для исправления
+4. Переход к следующей фиче только после APPROVE от inspector
+5. Checkpoint обновляется после каждой фичи: features_done + 1
+
+## Wave-execution (для milestone)
+
+При `/feature [milestone] --wave N`:
+
+1. Из tasks.json выбираются задачи для wave N (поле `wave` в задаче)
+2. Задачи выполняются последовательно через /take-task pipeline
+3. Между задачами обновляется checkpoint
+4. После волны: smoke test (<%= testCommand %>), обновление прогресса, коммит
+
+Волны определяются при планировании (/plan init):
+- Wave 1 — задачи без зависимостей
+- Wave 2 — зависят от Wave 1
+- Wave 3 — полировка, документация, tech-debt
+
+## Integration тесты
+
+tester(integration) вызывается в /audit-wave перед сдачей milestone. Не в каждой задаче.
+
+## Фазовый подход для milestone
+
+Перед стартом нового milestone — discuss phase:
+1. Обсудить scope, приоритеты, зависимости
+2. Зафиксировать решения в decisions.md
+3. Разбить на волны через /plan init (поле wave в задачах)
+
+## Discovery
+
+Если требование неясно:
 1. Сформулируй конкретный вопрос
 2. Покажи варианты решения с trade-offs
 3. Дождись ответа
-4. Зафиксируй в `dev-infra/memory/decisions.md`
+4. Зафиксируй в `dev-infra/memory/decisions.md` (формат ADR)
+
+## Связь с артефактами
+
+Перед началом задачи загрузить:
+- tasks.json → описание, acceptance_criteria (с метриками!), pmi_scenarios, risks, tdd_anchors
+- dev-infra/tests/acceptance/ → конкретные метрики
+- dev-infra/tests/pmi/ → процедуры тестирования
+
+Reviewer получает AC с полными метриками (не только ID).

@@ -1,13 +1,8 @@
 ---
 name: skeptic
 description: Reality checker — проверяет планы и решения на «миражи» (несуществующие файлы, API, модули, зависимости).
-tools:
-  - Read
-  - Glob
-  - Grep
-  - Bash
-  - WebSearch
-model: opus
+model: claude-sonnet-4-6
+allowed-tools: Read, Glob, Grep, Bash, WebSearch
 ---
 
 # Skeptic — Reality Checker

@@ -1,0 +1,200 @@
+---
+name: test
+description: |
+  Standalone тестирование: unit, integration, regression, acceptance, TDD.
+  Запускает tester + inspector, анализирует покрытие.
+
+  Use when: «протестируй», «тесты», «regression», «запусти тесты», «test», «покрытие», «coverage»
+user-invocable: true
+argument-hint: "[scope] [--level unit|integration|regression|acceptance|tdd] [--coverage]"
+allowed-tools: Read, Write, Edit, Glob, Grep, Bash, Agent
+---
+
+# Standalone тестирование
+
+Аргументы: `$ARGUMENTS`
+- scope — путь к модулю/директории (по умолчанию <%= srcDir %>)
+- --level — уровень тестов (по умолчанию unit)
+- --coverage — анализ покрытия
+
+## Определение режима
+
+| Аргумент | Режим | Описание |
+|----------|-------|----------|
+| `--level unit` | Unit | tester(unit) -> inspector -> fix cycle |
+| `--level integration` | Integration | tester(integration) -> report |
+| `--level regression` | Regression | полный прогон -> сравнение с предыдущими результатами |
+| `--level acceptance` | Acceptance | tester(acceptance) -> протокол -> results/ |
+| `--level tdd` | TDD | tester(tdd) -> failing тесты -> ready for dev |
+| `--coverage` | Coverage | полный прогон -> gap analysis -> модули ниже 80% |
+| _(пусто)_ | Unit | по умолчанию — unit |
+
+---
+
+## Mode A. Unit (default)
+
+### Фаза 1. Тестирование
+
+```
+Agent(subagent_type="tester", prompt="
+level: unit
+Напиши/обнови unit-тесты для [scope].
+Директория тестов: <%= testDir %>
+Фреймворк: <%= testFramework %>
+Покрытие >=80%.
+Edge cases, обработка ошибок, граничные значения.
+")
+```
+
+**Checkpoint:** тесты написаны.
+
+### Фаза 2. Инспекция
+
+```
+Agent(subagent_type="inspector", prompt="
+Проверь качество тестов: [файлы от tester].
+7 критериев: покрытие, naming, assertions, mocking, isolation, flaky, контроль доступа.
+")
+```
+
+**Обработка verdict:**
+- APPROVE -> готово
+- REQUEST_CHANGES -> tester исправляет -> inspector повторяет (макс. 2 раунда)
+
+**Checkpoint:** инспекция пройдена.
+
+### Фаза 3. Результат
+
+Покажи итог: файлы, passed/failed, покрытие, inspector findings.
+
+---
+
+## Mode B. Regression
+
+### Фаза 1. Прогон всех тестов
+
+```bash
+<%= testCommand %>
+```
+
+### Фаза 2. Сравнение
+
+Прочитай предыдущие результаты из `dev-infra/tests/results/` (последний файл).
+Сравни: новые failures, исправленные failures, стабильные тесты.
+
+### Фаза 3. Отчёт
+
+```
+## Regression Report
+
+| Метрика | Предыдущий | Текущий | Delta |
+|---------|-----------|---------|-------|
+| Passed | N | M | +K |
+| Failed | N | M | -K |
+| Total | N | M | +K |
+
+### Новые failures
+- test_name: причина
+
+### Исправленные
+- test_name: был fail, теперь pass
+```
+
+---
+
+## Mode C. Coverage
+
+### Фаза 1. Полный прогон
+
+```bash
+<%= testCommand %> --coverage
+```
+
+### Фаза 2. Gap Analysis
+
+Для каждого модуля с покрытием <80%:
+- Какие функции не покрыты?
+- Какие ветки пропущены?
+- Рекомендации: что тестировать первым
+
+### Фаза 3. Отчёт
+
+```
+## Coverage Report
+
+| Модуль | Покрытие | Цель | Статус |
+|--------|---------|------|--------|
+| module_a | 92% | >=80% | PASS |
+| module_b | 67% | >=80% | FAIL — gap |
+
+### Gaps
+- module_b: функции X, Y не покрыты
+```
+
+---
+
+## Mode D. TDD
+
+### Фаза 1. Генерация failing тестов
+
+```
+Agent(subagent_type="tester", prompt="
+mode: tdd
+Создай failing тесты для [scope].
+Директория тестов: <%= testDir %>
+Фреймворк: <%= testFramework %>
+TDD-якоря: [tdd_anchors из tasks.json, если есть]
+Описание ожидаемого поведения: [от пользователя]
+Тесты должны FAIL (код ещё не написан).
+")
+```
+
+### Фаза 2. Верификация RED
+
+Запусти тесты — убедись, что они fail. Если pass — якоря некорректны.
+
+```bash
+<%= testCommand %>
+```
+
+### Фаза 3. Результат
+
+```
+## TDD — Failing Tests (RED)
+
+Создано N failing тестов:
+- test_X: ожидает [поведение]
+- test_Y: ожидает [поведение]
+
+Следующий шаг: developer реализует код -> тесты станут GREEN.
+```
+
+---
+
+## Mode E. Acceptance
+
+### Фаза 1. Приёмочные тесты
+
+```
+Agent(subagent_type="tester", prompt="
+level: acceptance
+Milestone: [текущий из active-context.md]
+Критерии: dev-infra/tests/acceptance/milestone-X.X.md
+ПМИ: dev-infra/tests/pmi/
+")
+```
+
+### Фаза 2. Протокол
+
+Сохрани результат в `dev-infra/tests/results/acceptance-YYYY-MM-DD.md`.
+
+### Фаза 3. Итог
+
+Таблица: критерий -> метрика -> цель -> факт -> статус.
+
+## Final Check
+
+- [ ] Тесты написаны/обновлены
+- [ ] Inspector проверил качество (для unit)
+- [ ] Результаты сохранены
+- [ ] Покрытие >=80% (для unit/coverage)

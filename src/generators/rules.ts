@@ -9,6 +9,9 @@ const RULES = [
   'testing-standards',
   'shared-resources',
   'context-loading',
+  'agent-output-format',
+  'quality-gates',
+  'rollback-protocol',
 ];
 
 export async function generateRules(

@@ -11,6 +11,9 @@ const CORE_SKILLS = [
   'status',
   'plan',
   'review',
+  'code',
+  'test',
+  'done',
 ];
 
 const EXTRA_SKILLS = [
@@ -19,6 +22,12 @@ const EXTRA_SKILLS = [
   'write-report',
   'dashboard',
   'skill-master',
+  'decompose',
+  'feature',
+  'security',
+  'spec',
+  'techspec',
+  'prompts',
 ];
 
 function getSkillList(preset: AgentPreset): { name: string; dir: string }[] {

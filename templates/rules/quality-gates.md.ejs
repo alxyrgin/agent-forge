@@ -1,0 +1,80 @@
+# Quality Gates — ворота пайплайна
+
+Формальные правила маршрутизации между этапами разработки. Team Lead проверяет verdict каждого агента и направляет пайплайн по соответствующему пути.
+
+## Матрица маршрутизации
+
+### Анализ -> Архитектура
+
+| Verdict analyst | Действие |
+|-----------------|----------|
+| COMPLETE | Передать результат architect |
+| NEEDS_DISCOVERY | Показать вопросы пользователю -> дождаться ответа -> зафиксировать в decisions.md -> повторить analyst |
+
+### Архитектура -> Reality Check
+
+Параллельно запускаются architect и reviewer(plan_review). Решение принимается по комбинации:
+
+| architect | reviewer(plan) | Действие |
+|-----------|---------------|----------|
+| READY | APPROVE | Передать skeptic |
+| READY | REQUEST_CHANGES | architect исправляет по замечаниям -> повторить оба |
+| NEEDS_INPUT | любой | Запросить данные у пользователя -> повторить architect |
+
+Конфликт architect vs reviewer: если architect считает план готовым, но reviewer видит проблемы — приоритет у reviewer. Пользователь подтверждает финальный план.
+
+### Reality Check -> Код
+
+| Verdict skeptic | Действие |
+|-----------------|----------|
+| PASS | Передать developer |
+| PASS_WITH_WARNINGS | Передать developer, включить warnings в prompt |
+| FAIL | Вернуть architect для исправления -> повторить skeptic |
+
+### Код -> Тесты -> Inspector
+
+Per-feature цикл:
+
+| Этап | Verdict | Действие |
+|------|---------|----------|
+| developer | DONE | Передать tester |
+| developer | BLOCKED | Разобрать блокировку с пользователем |
+| tester | PASS (>=80%) | Передать inspector |
+| tester | FAIL | Передать developer для исправления -> повторить tester |
+| inspector | APPROVE | Перейти к следующей фиче или к ревью |
+| inspector | REQUEST_CHANGES | Передать tester для исправления тестов -> повторить inspector |
+
+### Ревью -> Финализация
+
+| Verdict reviewer | Раунд | Действие |
+|------------------|-------|----------|
+| APPROVE | любой | Перейти к tech-debt |
+| REQUEST_CHANGES | 1-2 | developer исправляет -> reviewer повторяет (раунд N+1) |
+| REQUEST_CHANGES | 3 | Эскалация — ESCALATE |
+| ESCALATE | 3 | Показать пользователю все findings |
+
+### Эскалация (Escalation Protocol)
+
+После 3 раундов ревью с неразрешёнными CRITICAL:
+
+1. Team Lead показывает пользователю все нерешённые findings
+2. Пользователь выбирает:
+   - **(a) Принять как tech-debt** — записать TD-NNN, продолжить
+   - **(b) Исправить вручную** — пользователь правит, повторить ревью
+   - **(c) Отменить задачу** — rollback по rollback-protocol.md
+3. Решение фиксируется в `dev-infra/memory/decisions.md` (формат ADR)
+
+## Quick Review (S-задачи)
+
+S-задачи проходят облегчённое ревью (mode: quick):
+- 1 раунд (без повторов)
+- Проверяется только: security, контроль доступа, критические баги
+- MEDIUM/LOW не блокируют, идут в tech-debt
+- APPROVE / REQUEST_CHANGES (только для CRITICAL)
+
+## Правила
+
+1. Каждый verdict обрабатывается — нет «проигнорировать и продолжить»
+2. Максимум 3 retry на любом этапе (кроме discovery — без лимита)
+3. При сбое агента (garbage output) — 1 retry с уточнённым prompt, затем эскалация
+4. Checkpoint обновляется после каждого gate

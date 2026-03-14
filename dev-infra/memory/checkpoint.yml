@@ -1,0 +1,21 @@
+# Checkpoint — восстановление после обрыва сессии
+#
+# Этот файл обновляется автоматически при /take-task и очищается при /complete-task.
+# При /start-session — если active: true, предлагается восстановление.
+
+active: false
+
+# task_id: ""
+# task_title: ""
+# current_step: 0
+# total_steps: 0
+# step_name: ""
+# feature_size: ""  # S / M / L
+# started_at: ""
+# last_updated: ""
+# context:
+#   analyst_result: ""
+#   architect_plan: ""
+#   files_changed: []
+#   tests_status: ""
+#   notes: ""

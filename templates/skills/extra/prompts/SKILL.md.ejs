@@ -1,0 +1,65 @@
+---
+name: prompts
+description: |
+  Standalone ревью LLM-промптов: ясность, few-shot, output format, injection safety, token efficiency.
+
+  Use when: «проверь промпты», «review prompts», «промпты», «prompts», «ревью промптов»
+user-invocable: true
+argument-hint: "[scope path]"
+allowed-tools: Read, Glob, Grep, Bash, Agent
+---
+
+# Ревью LLM-промптов
+
+Аргумент: `$ARGUMENTS` — путь к файлам с промптами (по умолчанию — поиск по проекту).
+
+## Фаза 1. Поиск промптов
+
+Если путь не указан — найди файлы с промптами:
+```
+Grep: pattern="prompt|system_message|user_message|few_shot" в <%= srcDir %>/**/*
+```
+
+Покажи найденные файлы, спроси: «Проверить все или выбрать?»
+
+**Checkpoint:** промпты найдены.
+
+## Фаза 2. Ревью
+
+```
+Agent(subagent_type="prompter", prompt="
+Проверь LLM-промпты в файлах: [список файлов]
+
+5 критериев:
+1. Ясность — инструкция однозначная?
+2. Few-shot — примеры есть и корректны?
+3. Output format — формат определён, валидируем?
+4. Injection safety — input экранирован?
+5. Token efficiency — промпт не избыточен?
+")
+```
+
+**Checkpoint:** ревью завершено.
+
+## Фаза 3. Отчёт
+
+```
+## Prompt Review Report
+
+**Verdict:** [GOOD / NEEDS_IMPROVEMENT]
+
+### Промпты проверены
+| Файл | Промпт | Verdict |
+|------|--------|---------|
+| src/llm/prompts.ts | classify_report | GOOD |
+| src/llm/prompts.ts | extract_params | NEEDS_IMPROVEMENT |
+
+### Findings
+1. [file:prompt_name] — [description] -> [recommendation]
+```
+
+## Final Check
+
+- [ ] Все промпты в scope проверены
+- [ ] Injection safety проверена
+- [ ] Рекомендации даны

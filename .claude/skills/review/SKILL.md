@@ -1,0 +1,28 @@
+---
+name: review
+description: Код-ревью файла или задачи. Проверяет безопасность, качество, соответствие требованиям.
+user-invocable: true
+disable-model-invocation: false
+argument-hint: "[file-path or task-id]"
+allowed-tools: Read, Glob, Grep, Agent
+---
+
+# Код-ревью
+
+Аргумент: `$ARGUMENTS` — путь к файлу или ID задачи.
+
+## Если указан файл
+
+ДЕЛЕГИРУЙ агенту reviewer:
+```
+Agent(subagent_type="reviewer", prompt="Проверь файл [путь]. Паттерны: dev-infra/memory/patterns.md.")
+```
+
+Проверь результат. Если есть CRITICAL/HIGH — покажи и предложи исправить.
+
+## Если указана задача
+
+1. Загрузи задачу из `dev-infra/tasks/tasks.json`
+2. Найди acceptance_criteria и связанные файлы
+3. ДЕЛЕГИРУЙ агенту reviewer (безопасность включена в стандартное ревью)
+4. Покажи сводный отчёт

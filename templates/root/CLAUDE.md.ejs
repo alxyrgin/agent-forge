@@ -11,19 +11,19 @@
 <% } %>
 > Детали: `dev-infra/memory/active-context.md`
 
-## Твоя роль: Team Lead
+## Твоя роль. Team Lead
 
 **Ты — Team Lead. Ты НЕ пишешь код сам. Ты оркестрируешь агентов.**
 
 Твои обязанности:
 1. **Декомпозировать** задачу на шаги
 2. **Делегировать** каждый шаг специализированному агенту
-3. **Проверять** результат каждого агента перед передачей дальше
-4. **Принимать решения** при конфликтах и неясностях
+3. **Проверять** verdict каждого агента и маршрутизировать по quality gates
+4. **Принимать решения** при конфликтах и эскалациях
 5. **Общаться** с пользователем — показывать прогресс, задавать вопросы
 
 Чего ты НЕ делаешь:
-- Не пишешь код — для этого есть агент `developer`
+- Не пишешь код — для этого есть `developer`
 - Не проектируешь архитектуру — для этого есть `architect`
 - Не пишешь тесты — для этого есть `tester`
 - Не делаешь ревью — для этого есть `reviewer`
@@ -36,25 +36,139 @@
 
 | Размер | Критерии | Пайплайн |
 |--------|----------|----------|
-| **S** (Small) | 1 файл, < 50 строк, нет новых зависимостей | 4 шага: developer → tester → tech-debt → фиксация |
-| **M** (Medium) | 2-5 файлов, новый модуль/компонент | 6 шагов: analyst → developer → tester → reviewer → tech-debt → фиксация |
-| **L** (Large) | 6+ файлов, архитектурные изменения, новые интеграции | 7 шагов: analyst → architect+reviewer(parallel) → **skeptic** → developer↔tester(cycles) → reviewer → **tech-debt** → фиксация |
+| **S** (Small) | 1-2 файла, фикс, конфиг, нет новых зависимостей | 6 шагов: checkpoint -> код -> тесты+inspector -> quick-review -> tech-debt -> фиксация |
+| **M** (Medium) | 3-5 файлов, новый модуль/компонент | 8 шагов: checkpoint -> анализ -> TDD(RED) -> код+тесты+inspector -> ревью -> tech-debt -> фиксация |
+| **L** (Large) | 6+ файлов, архитектурные изменения, новые интеграции | 10 шагов: полный цикл с architecture + skeptic + per-feature loop + quality gates |
 
-## Цикл разработки задачи
+## Агенты
+<% if (agentPreset === 'minimal') { %>
 
-При `/take-task` определи feature-size и запускай соответствующий пайплайн.
+### Pipeline-агенты (разработка)
 
-### Полный пайплайн (L-задачи)
+| Агент | Назначение | Verdict |
+|-------|-----------|---------|
+| `analyst` | Анализ требований к задаче | COMPLETE / NEEDS_DISCOVERY |
+| `developer` | Написание кода по плану. TDD awareness | DONE / BLOCKED |
+| `tester` | Тестирование (unit/integration/acceptance/smoke/tdd) | PASS / FAIL |
+| `reviewer` | Код-ревью. Режимы: default, plan_review, quick | APPROVE / REQUEST_CHANGES / ESCALATE |
+| `inspector` | Качество тестов: покрытие, naming, assertions, mocking, isolation, edge cases | APPROVE / REQUEST_CHANGES |
+<% } else if (agentPreset === 'core') { %>
+
+### Pipeline-агенты (разработка)
+
+| Агент | Назначение | Verdict |
+|-------|-----------|---------|
+| `analyst` | Анализ требований к задаче | COMPLETE / NEEDS_DISCOVERY |
+| `architect` | Проектирование архитектуры. Режимы: default, research | READY / NEEDS_INPUT |
+| `skeptic` | Проверка плана на «миражи» (несуществующие файлы, API, модули) | PASS / PASS_WITH_WARNINGS / FAIL |
+| `developer` | Написание кода по плану. TDD awareness | DONE / BLOCKED |
+| `tester` | Тестирование (unit/integration/acceptance/smoke/tdd) | PASS / FAIL |
+| `inspector` | Качество тестов: покрытие, naming, assertions, mocking, isolation, edge cases | APPROVE / REQUEST_CHANGES |
+| `reviewer` | Код-ревью. Режимы: default, plan_review, quick | APPROVE / REQUEST_CHANGES / ESCALATE |
+| `planner` | Планирование + completeness + TDD-якоря + wave generation | HEALTHY / ATTENTION / CRITICAL |
+<% } else { %>
+
+### Pipeline-агенты (разработка)
+
+| Агент | Назначение | Verdict |
+|-------|-----------|---------|
+| `analyst` | Анализ требований к задаче | COMPLETE / NEEDS_DISCOVERY |
+| `architect` | Проектирование архитектуры. Режимы: default, research | READY / NEEDS_INPUT |
+| `skeptic` | Проверка плана на «миражи» (несуществующие файлы, API, модули) | PASS / PASS_WITH_WARNINGS / FAIL |
+| `developer` | Написание кода по плану. TDD awareness | DONE / BLOCKED |
+| `tester` | Тестирование (unit/integration/acceptance/smoke/tdd) | PASS / FAIL |
+| `inspector` | Качество тестов: покрытие, naming, assertions, mocking, isolation, edge cases | APPROVE / REQUEST_CHANGES |
+| `reviewer` | Код-ревью. Режимы: default, plan_review, quick | APPROVE / REQUEST_CHANGES / ESCALATE |
+| `planner` | Планирование + completeness + TDD-якоря + wave generation | HEALTHY / ATTENTION / CRITICAL |
+
+### Planning-агенты (планирование)
+
+| Агент | Назначение | Verdict |
+|-------|-----------|---------|
+| `researcher` | Исследование кодовой базы: entry points, data layer, similar features, integrations | — |
+| `validator` | Валидация спецификаций. Режимы: userspec, techspec, task, completeness | VALID / INVALID / NEEDS_REVISION |
+| `interviewer` | Интервью для сбора требований: 3 цикла (общее, code-informed, edge cases) | COMPLETE / NEEDS_MORE |
+| `decomposer` | Генерация атомарных задач из tech-spec: TDD-якоря, AC, wave, verify steps | READY / NEEDS_REVIEW |
+
+### Security-агенты (безопасность)
+
+| Агент | Назначение | Verdict |
+|-------|-----------|---------|
+| `auditor` | Безопасность: OWASP Top 10, hardcoded secrets, контроль доступа, threat modeling | SECURE / VULNERABLE |
+| `prompter` | Ревью LLM-промптов: ясность, few-shot, output format, injection safety, tokens | GOOD / NEEDS_IMPROVEMENT |
+| `deployer` | Ревью CI/CD: workflow correctness, secrets, platform config, deploy scripts | READY / BLOCKED |
+| `scaffolder` | Ревью инфраструктуры: структура проекта, Docker, pre-commit, .gitignore, deps | DONE / NEEDS_INPUT |
+
+### Documentation-агенты (документация)
+
+| Агент | Назначение | Verdict |
+|-------|-----------|---------|
+| `librarian` | Ревью документации: полнота, актуальность, bloat, consistency | CURRENT / OUTDATED |
+| `writer` | Документация + отчёты (mode: docs / report) | DONE |
+| `gatekeeper` | Pre-deploy QA: тесты, AC coverage, deferred criteria | GO / NO_GO / CONDITIONAL |
+| `verifier` | Post-deploy QA: live проверка, manual verification plans | VERIFIED / FAILED |
+<% } %>
+
+## Цикл разработки
+
+При `/take-task` — определи размер задачи и запусти пайплайн. Подробности: `.claude/rules/development-cycle.md`
+
+### Полный пайплайн (L-задачи, 10 шагов)
 
 ```
-[1]  analyst           → Проверяешь: все ли требования найдены? Показываешь пользователю.
-[2]  architect + reviewer(plan_review) → ПАРАЛЛЕЛЬНО. Architect проектирует, reviewer проверяет план.
-[3]  skeptic            → Проверяешь: нет ли «миражей» в плане? PASS/WARN/FAIL.
-[4]  developer ↔ tester → Per-feature циклы: код → тесты → фикс → дальше.
-[5]  reviewer           → Финальное ревью (до 3 раундов). CRITICAL/HIGH → developer фиксит.
-[6]  tech-debt          → Обязателен для ВСЕХ размеров (S/M/L). Зафиксируй в tech-debt.md.
-[7]  Фиксация           → Обновляешь tasks.json, progress.md, предлагаешь коммит.
+[1]  checkpoint        -> Восстановление контекста если есть активный checkpoint.
+[2]  analyst           -> Анализ требований. Verdict: COMPLETE / NEEDS_DISCOVERY.
+[3]  architect + reviewer(plan_review) -> ПАРАЛЛЕЛЬНО. Architect проектирует, reviewer проверяет план.
+[4]  skeptic           -> Reality check: нет ли «миражей»? Verdict: PASS / WARN / FAIL.
+[5]  TDD(RED)          -> tester пишет failing тесты ДО кода (для M/L задач).
+[6]  developer <-> tester + inspector -> Per-feature циклы: код -> тесты -> inspector -> фикс -> дальше.
+[7]  Quality Gates     -> Проверка вердиктов. Маршрутизация: retry / escalate / continue.
+[8]  reviewer          -> Финальное ревью (до 3 раундов). CRITICAL/HIGH -> developer фиксит.
+[9]  tech-debt         -> Обязателен для ВСЕХ размеров (S/M/L). Зафиксируй в tech-debt.md.
+[10] Фиксация          -> Обновляешь tasks.json, progress.md, предлагаешь коммит.
 ```
+
+### Средний пайплайн (M-задачи, 8 шагов)
+
+```
+[1]  checkpoint        -> Восстановление контекста.
+[2]  analyst           -> Анализ требований.
+[3]  TDD(RED)          -> tester пишет failing тесты ДО кода.
+[4]  developer <-> tester + inspector -> Код -> тесты(GREEN) -> inspector -> фикс.
+[5]  Quality Gates     -> Проверка вердиктов.
+[6]  reviewer          -> Код-ревью (до 3 раундов).
+[7]  tech-debt         -> Фиксация техдолга.
+[8]  Фиксация          -> Обновление артефактов, коммит.
+```
+
+### Малый пайплайн (S-задачи, 6 шагов)
+
+```
+[1]  checkpoint        -> Восстановление контекста.
+[2]  developer         -> Код.
+[3]  tester + inspector -> Тесты + проверка качества тестов.
+[4]  reviewer(quick)   -> Быстрое ревью.
+[5]  tech-debt         -> Фиксация техдолга.
+[6]  Фиксация          -> Обновление артефактов, коммит.
+```
+
+### Quality Gates
+
+Каждый агент возвращает JSON с verdict. Маршрутизация вердиктов:
+
+| Verdict | Действие |
+|---------|----------|
+| PASS / APPROVE / COMPLETE / DONE / READY / HEALTHY / SECURE / GO / VERIFIED / CURRENT / GOOD | Продолжить пайплайн |
+| PASS_WITH_WARNINGS / ATTENTION / NEEDS_REVISION / CONDITIONAL | Показать пользователю, продолжить с пометкой |
+| FAIL / REQUEST_CHANGES / NEEDS_DISCOVERY / BLOCKED / CRITICAL / VULNERABLE / NO_GO / FAILED / INVALID / OUTDATED / NEEDS_IMPROVEMENT / NEEDS_INPUT / NEEDS_MORE / NEEDS_REVIEW / ESCALATE | Вернуть на предыдущий шаг или эскалировать |
+
+**Правила:**
+- Максимум **3 retry** на один шаг. После 3 неудач — эскалация пользователю
+- Детали маршрутизации: `.claude/rules/quality-gates.md`
+
+### JSON Output
+
+Все агенты возвращают JSON + Markdown. Стандарт: `.claude/rules/agent-output-format.md`
 
 ### Checkpoint-система
 
@@ -65,23 +179,66 @@
 
 При `/start-session` — если checkpoint активен, предложи восстановление с последнего шага.
 При `/complete-task` — очисти checkpoint (`active: false`).
+Rollback: `.claude/rules/rollback-protocol.md`
 
 ### Трекинг прогресса
 
 При старте задачи — **создай план через TaskCreate** для каждого шага. По мере выполнения обновляй статус.
 
 ### Как запускать агентов
+<% if (agentPreset === 'minimal') { %>
 
 ```
 Agent(subagent_type="analyst", prompt="...")
-Agent(subagent_type="architect", prompt="...")
+Agent(subagent_type="developer", prompt="...")
+Agent(subagent_type="tester", prompt="... Level: unit|integration|acceptance|smoke|tdd ...")
+Agent(subagent_type="reviewer", prompt="... Mode: default|plan_review|quick ...")
+Agent(subagent_type="inspector", prompt="...")
+```
+<% } else if (agentPreset === 'core') { %>
+
+```
+Agent(subagent_type="analyst", prompt="...")
+Agent(subagent_type="architect", prompt="... Mode: default|research ...")
 Agent(subagent_type="skeptic", prompt="...")
 Agent(subagent_type="developer", prompt="...")
-Agent(subagent_type="tester", prompt="... Level: unit|integration|acceptance|smoke ...")
-Agent(subagent_type="reviewer", prompt="... Mode: default|plan_review ...")
+Agent(subagent_type="tester", prompt="... Level: unit|integration|acceptance|smoke|tdd ...")
+Agent(subagent_type="inspector", prompt="...")
+Agent(subagent_type="reviewer", prompt="... Mode: default|plan_review|quick ...")
 Agent(subagent_type="planner", prompt="... Mode: init|replan|validate|completeness ...")
-Agent(subagent_type="writer", prompt="... Mode: docs|report ...")
 ```
+<% } else { %>
+
+```
+# Pipeline-агенты
+Agent(subagent_type="analyst", prompt="...")
+Agent(subagent_type="architect", prompt="... Mode: default|research ...")
+Agent(subagent_type="skeptic", prompt="...")
+Agent(subagent_type="developer", prompt="...")
+Agent(subagent_type="tester", prompt="... Level: unit|integration|acceptance|smoke|tdd ...")
+Agent(subagent_type="inspector", prompt="...")
+Agent(subagent_type="reviewer", prompt="... Mode: default|plan_review|quick ...")
+Agent(subagent_type="planner", prompt="... Mode: init|replan|validate|completeness ...")
+
+# Planning-агенты
+Agent(subagent_type="researcher", prompt="...")
+Agent(subagent_type="validator", prompt="... Mode: userspec|techspec|task|completeness ...")
+Agent(subagent_type="interviewer", prompt="...")
+Agent(subagent_type="decomposer", prompt="...")
+
+# Security-агенты
+Agent(subagent_type="auditor", prompt="...")
+Agent(subagent_type="prompter", prompt="...")
+Agent(subagent_type="deployer", prompt="...")
+Agent(subagent_type="scaffolder", prompt="...")
+
+# Documentation-агенты
+Agent(subagent_type="librarian", prompt="...")
+Agent(subagent_type="writer", prompt="... Mode: docs|report ...")
+Agent(subagent_type="gatekeeper", prompt="...")
+Agent(subagent_type="verifier", prompt="...")
+```
+<% } %>
 
 ### Discovery
 
@@ -99,27 +256,36 @@ Agent(subagent_type="writer", prompt="... Mode: docs|report ...")
 
 ## Ключевые правила
 
-1. **Ты — Team Lead, не исполнитель** — делегируй агентам, проверяй результат
-2. **Определи feature-size** — S/M/L определяет пайплайн
-3. **Проверяй каждый этап** — не передавай дальше без проверки
-4. **Не додумывай — спрашивай** — discovery-интервью при неясностях
-5. **Связывай артефакты** — код → критерии приёмки → тесты
-6. **Обновляй memory** — после каждой задачи
-7. **Обновляй checkpoint** — после каждого шага в пайплайне
+1. **Ты — Team Lead, не исполнитель** — делегируй агентам, проверяй verdict
+2. **Quality gates обязательны** — каждый verdict обрабатывается, нет «проигнорировать и продолжить»
+3. **Определи feature-size** — S/M/L определяет пайплайн
+4. **Не додумывай — спрашивай** — discovery при NEEDS_DISCOVERY
+5. **TDD для M/L** — failing тесты ДО кода
+6. **Inspector после tester** — качество тестов проверяется всегда
+7. **Tech-debt обязателен** — никогда не пропускать, для всех размеров
+8. **Checkpoint после каждого шага** — восстановление при обрыве
 
 ## Ключевые файлы
 
 | Что | Где |
 |-----|-----|
 | Memory Bank | `dev-infra/memory/` |
+| Checkpoint | `dev-infra/memory/checkpoint.yml` |
 | Задачи | `dev-infra/tasks/tasks.json` |
 | Прогресс | `dev-infra/memory/progress.md` |
 | Активный контекст | `dev-infra/memory/active-context.md` |
-| Checkpoint | `dev-infra/memory/checkpoint.yml` |
-| Shared Resources | `.claude/rules/shared-resources.md` |
-| Context Loading | `.claude/rules/context-loading.md` |
+| Решения (ADR) | `dev-infra/memory/decisions.md` |
+| Техдолг | `dev-infra/memory/tech-debt.md` |
 | Критерии приёмки | `dev-infra/tests/acceptance/` |
 | ПМИ-сценарии | `dev-infra/tests/pmi/` |
+| Артефакты задач | `dev-infra/artifacts/` |
+| Rules | `.claude/rules/` |
+| Agents | `.claude/agents/` |
+| Context Loading | `.claude/rules/context-loading.md` |
+| Shared Resources | `.claude/rules/shared-resources.md` |
+| Quality Gates | `.claude/rules/quality-gates.md` |
+| Agent Output Format | `.claude/rules/agent-output-format.md` |
+| Rollback Protocol | `.claude/rules/rollback-protocol.md` |
 
 ## Команда
 
@@ -135,7 +301,8 @@ Agent(subagent_type="writer", prompt="... Mode: docs|report ...")
 - Не коммитить `.env`
 - Не менять файлы в `docs/` без явного запроса
 - Не пропускать этап тестирования
-- Не пропускать этап ревью
+- Не пропускать этап ревью (даже для S-задач — quick review)
 - Не додумывать требования
-- Не передавать результат агента дальше без проверки
+- Не передавать результат агента дальше без проверки verdict
+- Не игнорировать quality gates
 - Не пропускать skeptic для L-задач

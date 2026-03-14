@@ -1,0 +1,60 @@
+# Rollback Protocol — процедура отката
+
+## При ошибке агента
+
+| Тип ошибки | Действие |
+|------------|----------|
+| Compilation error | developer retry с конкретной ошибкой в prompt |
+| Tests crash (не FAIL, а crash) | tester диагностирует -> developer исправляет |
+| Agent returns garbage | 1 retry с уточнённым prompt -> при повторе — эскалация |
+| Agent timeout | Retry с меньшим scope (разбить задачу) |
+| Repeated failure (3+) | Остановить пайплайн, показать пользователю, спросить |
+
+## При отмене задачи mid-pipeline
+
+1. Проверить uncommitted changes: `git status`
+2. Если есть изменения — `git stash` с описательным сообщением:
+   ```
+   git stash push -m "WIP: [task_id] — отмена на шаге [step]"
+   ```
+3. Обновить checkpoint:
+   ```yaml
+   active: false
+   status: aborted
+   abort_reason: "причина"
+   stash_ref: "stash@{0}"  # если был stash
+   ```
+4. Обновить tasks.json: status -> `todo` (не оставлять `in_progress`)
+5. Обновить active-context.md: убрать текущую задачу
+6. Уведомить пользователя о результате отката
+
+## При восстановлении после отмены
+
+1. Прочитать checkpoint — найти abort_reason и stash_ref
+2. Предложить пользователю:
+   - **(a) Восстановить** — `git stash pop`, продолжить с checkpoint
+   - **(b) Отбросить** — `git stash drop`, начать задачу заново
+   - **(c) Отложить** — оставить stash, взять другую задачу
+
+## Decision Tree
+
+```
+Ошибка возникла?
+|-- Агент вернул ошибку
+|   |-- Понятная ошибка (compilation, test fail)
+|   |   '-- Передать ошибку developer/tester -> retry
+|   '-- Непонятная ошибка (garbage, timeout)
+|       |-- Retry #1 с уточнённым prompt
+|       '-- Retry failed -> показать пользователю
+|-- Пользователь отменил задачу
+|   '-- Stash -> checkpoint(aborted) -> tasks(todo)
+'-- Сессия оборвалась (crash, disconnect)
+    '-- Checkpoint сохраняет состояние -> при /take-task предложит восстановление
+```
+
+## Правила
+
+1. Никогда не использовать `git reset --hard` без явного запроса пользователя
+2. Всегда использовать `git stash` вместо отбрасывания изменений
+3. Checkpoint обновляется до операции отката (чтобы можно было восстановиться)
+4. Stash-сообщения всегда содержат task_id для трассировки

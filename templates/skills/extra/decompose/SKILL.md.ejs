@@ -1,0 +1,72 @@
+---
+name: decompose
+description: |
+  Декомпозиция tech-spec на атомарные задачи с TDD-якорями, wave, verify steps.
+
+  Use when: «декомпозируй», «разбей на задачи», «decompose», «создай задачи из спеки»
+user-invocable: true
+argument-hint: "[tech-spec path]"
+allowed-tools: Read, Write, Edit, Glob, Grep, Bash, Agent
+---
+
+# Декомпозиция на задачи
+
+Аргумент: `$ARGUMENTS` — путь к tech-spec (опционально, по умолчанию — последний созданный).
+
+## Фаза 1. Генерация задач
+
+```
+Agent(subagent_type="decomposer", prompt="
+Tech-spec: [содержание tech-spec]
+Code research: [если есть]
+Существующие задачи: [tasks.json — для определения ID и избежания дублирования]
+
+Для каждой функциональной единицы создай задачу:
+- TDD-якоря, AC, dependencies, wave, context_files, verify_steps
+- Атомарность: 1 задача = 1 сессия
+")
+```
+
+**Checkpoint:** задачи сгенерированы.
+
+## Фаза 2. Валидация (параллельно)
+
+```
+# Validator проверяет задачи
+Agent(subagent_type="validator", prompt="mode: task. Проверь задачи: [список задач]. Атомарность, AC, TDD-якоря, dependencies.")
+
+# Skeptic проверяет на миражи
+Agent(subagent_type="skeptic", prompt="Проверь задачи на миражи: context_files существуют? Dependencies корректны? [список задач]")
+```
+
+Если есть findings — исправить (макс. 3 итерации).
+
+**Checkpoint:** валидация пройдена.
+
+## Фаза 3. Запись
+
+Покажи пользователю:
+
+```
+## Задачи из tech-spec
+
+| Wave | ID | Название | Priority | Dependencies | TDD-якоря |
+|------|----|-----------|---------|--------------|-----------|
+| 1 | M1.2-001 | ... | high | - | 2 |
+| 1 | M1.2-002 | ... | high | - | 3 |
+| 2 | M1.2-003 | ... | medium | M1.2-001 | 2 |
+
+Всего: N задач, K волн.
+```
+
+Спроси: «Записать в tasks.json?»
+
+При подтверждении — обновить tasks.json (добавить новые задачи).
+
+## Final Check
+
+- [ ] Задачи сгенерированы из tech-spec
+- [ ] Validator проверил
+- [ ] Skeptic проверил
+- [ ] Пользователь утвердил
+- [ ] tasks.json обновлён

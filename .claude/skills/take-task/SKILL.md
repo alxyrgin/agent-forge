@@ -1,0 +1,103 @@
+---
+name: take-task
+description: Взять задачу в работу и запустить полный цикл разработки (анализ → план → код → тесты → ревью).
+user-invocable: true
+disable-model-invocation: false
+argument-hint: "[task-id]"
+allowed-tools: Read, Write, Edit, Glob, Grep, Bash, Agent, WebSearch
+---
+
+# Взять задачу и запустить полный цикл разработки
+
+Аргумент: `$ARGUMENTS` — ID задачи (опционально). Если не указан — покажи доступные.
+
+## Шаг 0. Проверить checkpoint (восстановление)
+
+Прочитай `dev-infra/memory/checkpoint.yml`.
+Если `active: true` и `task_id` совпадает с запрошенной задачей:
+- Восстанови контекст из `checkpoint.context`
+- Продолжи с шага `current_step`
+- Сообщи пользователю: «Восстановление с шага N — [step_name]»
+
+## Если ID не указан
+
+1. Прочитай `dev-infra/tasks/tasks.json`
+2. Покажи задачи для текущего milestone со статусом `todo`, отсортированные по приоритету
+3. Проверь зависимости: не предлагай задачу, если её dependencies не в статусе done
+4. Спроси, какую задачу взять
+
+## При выборе задачи
+
+### Шаг 1. Определить feature-size и обновить статус
+
+Оцени размер задачи:
+- **S** (Small): 1 файл, < 50 строк, нет новых зависимостей → 4 шага
+- **M** (Medium): 2-5 файлов, новый модуль/компонент → 6 шагов
+- **L** (Large): 6+ файлов, архитектурные изменения → 7 шагов
+
+В tasks.json: статус → `in_progress`, updated → сегодня.
+Создать прогресс-бар задачи через TaskCreate.
+
+Обнови checkpoint:
+```yaml
+active: true
+task_id: "[ID]"
+task_title: "[название]"
+current_step: 1
+total_steps: [4/6/7]
+step_name: "analyst"
+feature_size: "[S/M/L]"
+started_at: "[дата]"
+last_updated: "[дата]"
+```
+
+### Шаг 2. Анализ требований — ДЕЛЕГИРОВАТЬ агенту analyst
+```
+Agent(subagent_type="analyst", prompt="Проанализируй задачу [ID]. Описание: [description].")
+```
+
+Покажи пользователю результат анализа. Дождись подтверждения.
+Обнови checkpoint: `current_step: 2, step_name: "architect"`.
+
+### Шаг 3. Discovery (если есть вопросы)
+- Задай конкретные вопросы пользователю
+- Зафиксируй решения в `dev-infra/memory/decisions.md`
+
+### Шаг 4. Проектирование — ПАРАЛЛЕЛЬНО architect + reviewer (L)
+```
+Agent(subagent_type="architect", prompt="Спроектируй [модуль]. Требования: [результат шага 2].")
+Agent(subagent_type="reviewer", prompt="Mode: plan_review. Проверь план на реалистичность и качество: [результат шага 2].")
+```
+- Покажи план пользователю, дождись подтверждения
+- Обнови checkpoint
+
+### Шаг 5. Reality check — ДЕЛЕГИРОВАТЬ агенту skeptic (только L)
+```
+Agent(subagent_type="skeptic", prompt="Проверь план на реалистичность: [результат шага 4].")
+```
+- Если FAIL — верни architect'у на доработку
+- Обнови checkpoint
+
+### Шаг 6. Реализация + Тестирование — per-feature циклы developer ↔ tester
+```
+Agent(subagent_type="developer", prompt="Реализуй [модуль] по плану: [результат шага 4].")
+Agent(subagent_type="tester", prompt="Level: unit. Напиши тесты для [модуль]. Покрытие ≥80%. Запусти npx vitest run.")
+```
+- Цикл: код → тесты → фикс → дальше
+- Если тесты падают — developer фиксит, tester перезапускает
+- Обнови checkpoint
+
+### Шаг 7. Ревью — ДЕЛЕГИРОВАТЬ агенту reviewer (M, L)
+```
+Agent(subagent_type="reviewer", prompt="Mode: default. Проверь код в [файлы]. Критерии: [AC IDs].")
+```
+- Финальное ревью (до 3 раундов)
+- Если CRITICAL/HIGH — верни developer'у
+- Обнови checkpoint
+
+### Шаг 8. Tech-debt check (обязателен для ВСЕХ размеров)
+Проверь отклонения от целевой реализации. Если есть — зафиксируй в `dev-infra/memory/tech-debt.md`.
+
+### Шаг 9. Завершение
+- Покажи итог: что сделано, результат тестов, ревью
+- Предложи: `/complete-task`

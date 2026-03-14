@@ -1,0 +1,77 @@
+---
+name: security
+description: |
+  Standalone security audit: OWASP Top 10, контроль доступа, hardcoded secrets, threat modeling.
+
+  Use when: «проверь безопасность», «security audit», «security», «аудит безопасности», «OWASP»
+user-invocable: true
+argument-hint: "[scope path]"
+allowed-tools: Read, Glob, Grep, Bash, Agent
+---
+
+# Security Audit
+
+Аргумент: `$ARGUMENTS` — путь к директории/файлам для аудита (по умолчанию <%= srcDir %>).
+
+## Фаза 1. Подготовка
+
+1. Определи scope:
+   - Если указан путь — использовать его
+   - Иначе — `<%= srcDir %>`
+2. Найди файлы для аудита: `Glob: [scope]/**/*`
+3. Прочитай `docs/` — контекст рисков проекта (если есть)
+
+**Checkpoint:** scope определён, файлы найдены.
+
+## Фаза 2. Аудит
+
+```
+Agent(subagent_type="auditor", prompt="
+Проведи security audit.
+Scope: [список файлов]
+Риски проекта: [ключевые из документации]
+
+Проверь:
+1. OWASP Top 10 (A01-A10)
+2. Hardcoded secrets (API keys, tokens, passwords)
+3. Контроль доступа (каждый запрос к данным проходит проверку прав?)
+4. Threat modeling (точки входа, чувствительные данные, возможные атаки)
+")
+```
+
+**Checkpoint:** аудит завершён.
+
+## Фаза 3. Отчёт
+
+Покажи результаты:
+
+```
+## Security Audit Report
+
+**Scope:** [path]
+**Verdict:** [SECURE / VULNERABLE]
+
+### Summary
+- Files checked: N
+- Findings: X (C critical, H high, M medium, L low)
+
+### Critical / High Findings
+1. [file:line] — [description] -> [fix]
+
+### Access Control Audit
+- Data access points: N
+- Protected: M
+- Unprotected: K (list)
+
+### Recommendations
+1. [recommendation]
+```
+
+Если есть critical/high — предложить создать задачи для исправления.
+
+## Final Check
+
+- [ ] Все файлы в scope проверены
+- [ ] OWASP Top 10 проверен
+- [ ] Контроль доступа проверен
+- [ ] Secrets не найдены (или замаскированы)

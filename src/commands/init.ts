@@ -12,7 +12,7 @@ export async function initCommand(options: InitOptions): Promise<void> {
   const targetDir = process.cwd();
 
   console.log();
-  console.log(chalk.bold('  agent-forge v2.0.0'));
+  console.log(chalk.bold('  agent-forge v3.0.0'));
   console.log(chalk.dim('  AI-driven Development Framework for Claude Code'));
   console.log();
 

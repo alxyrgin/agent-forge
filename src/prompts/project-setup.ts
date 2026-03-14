@@ -190,9 +190,9 @@ export async function promptProjectSetup(targetDir: string): Promise<ProjectCont
       name: 'agentPreset',
       message: 'Agent preset:',
       choices: [
-        { name: 'Core (9 agents — recommended)', value: 'core' },
-        { name: 'Full (14 agents + extra skills)', value: 'full' },
-        { name: 'Minimal (4 agents)', value: 'minimal' },
+        { name: 'Core (8 agents — development pipeline)', value: 'core' },
+        { name: 'Full (20 agents — all categories + extra skills)', value: 'full' },
+        { name: 'Minimal (5 agents — essentials + inspector)', value: 'minimal' },
       ],
     },
     {

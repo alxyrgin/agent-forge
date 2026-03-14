@@ -1,0 +1,97 @@
+---
+name: techspec
+description: |
+  Создание технической спецификации: code research, архитектура, 5 параллельных валидаторов.
+
+  Use when: «техническая спецификация», «tech spec», «техспек», «составь ТЗ», «спроектируй»
+user-invocable: true
+argument-hint: "[user-spec path or topic]"
+allowed-tools: Read, Write, Edit, Glob, Grep, Bash, Agent
+---
+
+# Создание технической спецификации
+
+Аргумент: `$ARGUMENTS` — путь к user-spec.md или тема.
+
+## Фаза 1. Code Research
+
+```
+Agent(subagent_type="researcher", prompt="
+Исследуй кодовую базу для проектирования.
+Scope: [тема/spec].
+Найди: entry points, data layer, similar features, integrations, constraints.
+")
+```
+
+**Checkpoint:** research завершён.
+
+## Фаза 2. Архитектура
+
+```
+Agent(subagent_type="architect", prompt="
+Спроектируй архитектуру на основе:
+- User-spec: [содержание spec]
+- Code research: [результат researcher]
+Верни: структуру файлов, API-контракты, модели, стратегию контроля доступа, trade-offs.
+Разбей на features для декомпозиции.
+")
+```
+
+**Checkpoint:** архитектура спроектирована.
+
+## Фаза 3. Параллельная валидация (5 агентов)
+
+Запусти параллельно:
+
+```
+# 1. Skeptic — миражи
+Agent(subagent_type="skeptic", prompt="Проверь архитектурный план на миражи: [план]")
+
+# 2. Validator (completeness) — трассировка требований
+Agent(subagent_type="validator", prompt="mode: completeness. Проверь: все требования из spec покрыты планом? [spec] [план]")
+
+# 3. Auditor — безопасность
+Agent(subagent_type="auditor", prompt="Проверь архитектуру на безопасность: [план]. OWASP Top 10, контроль доступа.")
+
+# 4. Inspector — стратегия тестирования
+Agent(subagent_type="inspector", prompt="Проверь стратегию тестирования в плане: [план]. Покрытие, edge cases.")
+
+# 5. Validator (techspec) — шаблон
+Agent(subagent_type="validator", prompt="mode: techspec. Проверь tech-spec на соответствие стандартам: [план]")
+```
+
+**Обработка:** собери findings от всех 5 агентов.
+
+**Checkpoint:** валидация завершена.
+
+## Фаза 4. Исправление (макс. 3 итерации)
+
+Если есть findings с severity high:
+
+```
+Agent(subagent_type="architect", prompt="
+Исправь план по замечаниям:
+[findings от 5 агентов]
+")
+```
+
+Повтори валидацию. Макс. 3 итерации.
+
+**Checkpoint:** исправления применены.
+
+## Фаза 5. Утверждение
+
+Покажи пользователю финальный tech-spec:
+- Архитектура
+- Результаты валидации (все 5 агентов)
+- Оставшиеся warnings
+
+Спроси: «Утвердить tech-spec?»
+
+## Final Check
+
+- [ ] Code research проведён
+- [ ] Архитектура спроектирована
+- [ ] 5 валидаторов проверили
+- [ ] Findings исправлены
+- [ ] Пользователь утвердил

@@ -1,5 +1,32 @@
 # Changelog
 
+## [3.0.0] — 2026-03-14
+
+### Breaking Changes
+- Структура шаблонов агентов: `templates/agents/core/` → `templates/agents/pipeline/`
+- `writer` перемещён из pipeline в documentation
+- Пайплайны изменены: S(4→6), M(6→8), L(7→10)
+- Пресеты изменены: minimal(4→5), core(8), full(8→20)
+
+### Added
+- 12 новых агентов: inspector, researcher, validator, interviewer, decomposer, auditor, prompter, deployer, scaffolder, librarian, gatekeeper, verifier
+- 4 категории агентов: pipeline(8), planning(4), security(4), documentation(4)
+- 3 новых правила: agent-output-format, quality-gates, rollback-protocol
+- 9 новых скиллов: code, test, done (core); decompose, feature, security, spec, techspec, prompts (extra)
+- Quality Gates система с verdict-маршрутизацией
+- JSON Output стандарт для всех агентов
+- TDD(RED) фаза для M/L задач
+- Inspector обязателен после tester
+- Per-feature loop для L-задач
+- Rollback protocol
+
+### Changed
+- Все pipeline-агенты обновлены: JSON output, verdicts, TDD awareness
+- take-task: полная переработка пайплайнов
+- start-session: tech-debt trigger check
+- development-cycle: S(6)/M(8)/L(10) шагов
+- CLAUDE.md: conditional rendering по preset, quality gates, 8 ключевых правил
+
 ## [2.1.0] - 2026-03-11
 
 ### Changed
