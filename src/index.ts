@@ -1,6 +1,7 @@
 import { Command } from 'commander';
 import { initCommand } from './commands/init.js';
 import { doctorCommand } from './commands/doctor.js';
+import { updateCommand } from './commands/update.js';
 
 const program = new Command();
 
@@ -20,5 +21,10 @@ program
   .command('doctor')
   .description('Check integrity of the generated structure')
   .action(doctorCommand);
+
+program
+  .command('update')
+  .description('Update framework files to the latest version (preserves user data)')
+  .action(updateCommand);
 
 program.parse();

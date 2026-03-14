@@ -60,14 +60,8 @@ export async function generateInfra(
 
   // .claude-forge.json — manifest for doctor command
   try {
-    const manifest = {
-      version: '3.0.0',
-      createdAt: ctx.today,
-      projectName: ctx.projectName,
-      agentPreset: ctx.agentPreset,
-      language: ctx.language,
-      expectedFiles: getExpectedFiles(ctx),
-    };
+    const manifest = buildManifest(ctx);
+
     const outputPath = path.join(ctx.targetDir, '.claude-forge.json');
     const status = await writeFileSafe(
       outputPath,
@@ -87,7 +81,45 @@ export async function generateInfra(
   return result;
 }
 
-function getExpectedFiles(ctx: ProjectContext): string[] {
+export interface ForgeManifest {
+  version: string;
+  createdAt: string;
+  updatedAt: string;
+  projectName: string;
+  projectDescription: string;
+  agentPreset: string;
+  language: string;
+  stack: string;
+  framework: string;
+  testFramework: string;
+  testCommand: string;
+  srcDir: string;
+  testDir: string;
+  commitStyle: string;
+  expectedFiles: string[];
+}
+
+export function buildManifest(ctx: ProjectContext): ForgeManifest {
+  return {
+    version: '3.0.0',
+    createdAt: ctx.today,
+    updatedAt: ctx.today,
+    projectName: ctx.projectName,
+    projectDescription: ctx.projectDescription,
+    language: ctx.language,
+    agentPreset: ctx.agentPreset,
+    stack: ctx.stack,
+    framework: ctx.framework,
+    testFramework: ctx.testFramework,
+    testCommand: ctx.testCommand,
+    srcDir: ctx.srcDir,
+    testDir: ctx.testDir,
+    commitStyle: ctx.commitStyle,
+    expectedFiles: getExpectedFiles(ctx),
+  };
+}
+
+export function getExpectedFiles(ctx: ProjectContext): string[] {
   const files = [
     '.claude/CLAUDE.md',
     '.claude/settings.json',
