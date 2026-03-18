@@ -12,6 +12,7 @@ const RULES = [
   'agent-output-format',
   'quality-gates',
   'rollback-protocol',
+  'linear-sync',
 ];
 
 export async function generateRules(

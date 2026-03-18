@@ -64,3 +64,21 @@ Agent(subagent_type="librarian", prompt="
 - [ ] Документация актуальна
 - [ ] PK files обновлены
 - [ ] Коммит предложен
+
+## Linear Sync
+
+> Non-blocking. Если Linear MCP недоступен или linear-mapping.json не настроен — пропустить.
+
+1. Проверь наличие `dev-infra/config/linear-mapping.json` и что `linear.team` заполнен
+2. При финализации фичи — для всех задач фичи с `linear_id`:
+   - Обнови state → «Done» (через status_map)
+   - Добавь comment:
+     ```
+     ### Feature Finalized — YYYY-MM-DD
+
+     Feature [название] финализирована.
+     Задач завершено: N
+
+     ---
+     _Synced by agent-forge_
+     ```

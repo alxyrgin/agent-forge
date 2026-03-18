@@ -33,12 +33,28 @@ export async function generateInfra(
     result.errors.push(`tasks.json: ${err}`);
   }
 
+  // linear-mapping.json
+  try {
+    const content = await renderTemplate('config/linear-mapping.json.ejs', templateData);
+    const outputPath = path.join(ctx.targetDir, 'dev-infra/config/linear-mapping.json');
+    const status = await writeFileSafe(outputPath, content, overwrite);
+
+    if (status === 'skipped') {
+      result.filesSkipped.push(outputPath);
+    } else {
+      result.filesCreated.push(outputPath);
+    }
+  } catch (err) {
+    result.errors.push(`linear-mapping.json: ${err}`);
+  }
+
   // Create empty directories with .gitkeep
   const dirs = [
     'dev-infra/sessions',
     'dev-infra/tests/acceptance',
     'dev-infra/tests/pmi',
     'dev-infra/tests/results',
+    'dev-infra/config',
   ];
 
   for (const dir of dirs) {
@@ -101,7 +117,7 @@ export interface ForgeManifest {
 
 export function buildManifest(ctx: ProjectContext): ForgeManifest {
   return {
-    version: '3.0.0',
+    version: '3.2.0',
     createdAt: ctx.today,
     updatedAt: ctx.today,
     projectName: ctx.projectName,
@@ -134,6 +150,7 @@ export function getExpectedFiles(ctx: ProjectContext): string[] {
     'dev-infra/memory/patterns.md',
     'dev-infra/memory/troubleshooting.md',
     'dev-infra/memory/checkpoint.yml',
+    'dev-infra/config/linear-mapping.json',
   ];
 
   // Hooks
@@ -149,6 +166,7 @@ export function getExpectedFiles(ctx: ProjectContext): string[] {
     '.claude/rules/agent-output-format.md',
     '.claude/rules/quality-gates.md',
     '.claude/rules/rollback-protocol.md',
+    '.claude/rules/linear-sync.md',
   );
 
   // Skills (10 core + 11 extra for full)
@@ -159,7 +177,7 @@ export function getExpectedFiles(ctx: ProjectContext): string[] {
   ];
   const extraSkills = [
     'interview', 'audit-wave', 'write-report', 'dashboard', 'skill-master',
-    'decompose', 'feature', 'security', 'spec', 'techspec', 'prompts',
+    'decompose', 'feature', 'security', 'spec', 'techspec', 'prompts', 'sync-linear',
   ];
   const skills = ctx.agentPreset === 'full'
     ? [...coreSkills, ...extraSkills]

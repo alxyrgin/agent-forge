@@ -28,6 +28,7 @@ const EXTRA_SKILLS = [
   'spec',
   'techspec',
   'prompts',
+  'sync-linear',
 ];
 
 function getSkillList(preset: AgentPreset): { name: string; dir: string }[] {

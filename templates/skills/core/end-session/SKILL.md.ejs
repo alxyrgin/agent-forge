@@ -87,3 +87,21 @@ memory(Участник): обновление после сессии YYYY-MM-D
 - dev-infra/tasks/tasks.json (если обновлён)
 
 **После коммита — `git push origin <%= defaultBranch || 'main' %>`.**
+
+## Linear Sync
+
+> Non-blocking. Если Linear MCP недоступен или linear-mapping.json не настроен — пропустить.
+
+1. Проверь наличие `dev-infra/config/linear-mapping.json` и что `linear.team` заполнен
+2. Для каждой задачи в статусе `in_progress` с `linear_id`:
+   - Добавь comment с session summary:
+     ```
+     ### Session Summary — YYYY-MM-DD
+
+     [что сделано за сессию]
+     [текущий статус задачи]
+     [следующие шаги]
+
+     ---
+     _Synced by agent-forge_
+     ```

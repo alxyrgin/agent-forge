@@ -1,0 +1,87 @@
+---
+name: sync-linear
+description: |
+  Синхронизация tasks.json → Linear (однонаправленная).
+  Создаёт/обновляет issues, устанавливает зависимости, сохраняет linear_id.
+
+  Use when: «синхронизируй linear», «sync linear», «обнови linear», «залей задачи в linear»
+user-invocable: true
+disable-model-invocation: false
+argument-hint: "[all|milestone:X|task:ID]"
+allowed-tools: Read, Write, Edit, Glob, Grep, Bash
+---
+
+# Синхронизация tasks.json → Linear
+
+Аргумент: `$ARGUMENTS` — scope синхронизации.
+
+## Определение scope
+
+| Аргумент | Scope | Описание |
+|----------|-------|----------|
+| `all` | Все задачи | Полная синхронизация |
+| `milestone:X` | Milestone | Задачи конкретного milestone |
+| `task:ID` | Одна задача | Конкретная задача по ID |
+| _(пусто)_ | Все задачи | По умолчанию — all |
+
+## Шаг 0. Проверка доступности
+
+1. Проверь наличие `dev-infra/config/linear-mapping.json`
+2. Если нет — сообщи: «Конфигурация Linear не найдена. Запусти `agent-forge init` и заполни `dev-infra/config/linear-mapping.json`.»
+3. Прочитай маппинг — проверь что team и project заполнены (не placeholder)
+
+## Шаг 1. Загрузка данных
+
+1. Прочитай `dev-infra/tasks/tasks.json`
+2. Прочитай `dev-infra/config/linear-mapping.json`
+3. Отфильтруй задачи по scope
+
+## Шаг 2. Первый проход — создание/обновление issues
+
+Для каждой задачи:
+
+1. **Если есть `linear_id`** — обновить существующий issue:
+   - Используй Linear MCP `save_issue` с id = linear_id
+   - Обнови: title, description, state, priority, assignee, labels, dueDate
+
+2. **Если нет `linear_id`** — создать новый issue:
+   - Используй Linear MCP `save_issue` без id
+   - Маппинг полей по linear-mapping.json:
+     - title = task.title
+     - description = сформировать из task.description + acceptance_criteria + tdd_anchors
+     - state = status_map[task.status]
+     - priority = priority_map[task.priority]
+     - assigneeId = assignee_map[task.assignee] (если есть)
+     - labelIds = labels[task.type] (если есть)
+     - dueDate = task.deadline (если есть)
+     - teamId = linear.team
+     - projectId = linear.project
+   - **Сохрани `linear_id` обратно в tasks.json**
+
+## Шаг 3. Второй проход — зависимости
+
+Для каждой задачи с `dependencies`:
+- Если все зависимости имеют `linear_id`:
+  - Установи `blockedBy` через Linear MCP
+
+## Шаг 4. Отчёт
+
+```
+## Linear Sync Report
+
+| Метрика | Значение |
+|---------|----------|
+| Создано | N |
+| Обновлено | M |
+| Пропущено | K |
+| Warnings | W |
+
+### Warnings (если есть)
+- [task_id]: [причина]
+```
+
+## Error Handling
+
+- Linear MCP недоступен → сообщить пользователю, прервать
+- Ошибка на одном issue → логировать warning, продолжить остальные
+- Маппинг неполный (нет status/priority) → использовать default, логировать warning

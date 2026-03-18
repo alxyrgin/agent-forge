@@ -70,3 +70,12 @@ Agent(subagent_type="skeptic", prompt="Проверь задачи на мира
 - [ ] Skeptic проверил
 - [ ] Пользователь утвердил
 - [ ] tasks.json обновлён
+
+## Linear Sync
+
+> Non-blocking. Если Linear MCP недоступен или linear-mapping.json не настроен — пропустить.
+
+1. Проверь наличие `dev-infra/config/linear-mapping.json` и что `linear.team` заполнен
+2. После записи задач в tasks.json:
+   - Предложи пользователю: «Создано N новых задач. Синхронизировать в Linear? (/sync-linear)»
+   - **Не запускай sync автоматически** — только предложи

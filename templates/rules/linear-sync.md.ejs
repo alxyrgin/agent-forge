@@ -1,0 +1,65 @@
+# Linear Sync — правила синхронизации
+
+## Принцип
+
+- **tasks.json = source of truth**, Linear = зеркало (read-only mirror)
+- Синхронизация однонаправленная: tasks.json → Linear
+- Никогда не читать данные из Linear для обновления tasks.json
+
+## Триггеры синхронизации
+
+| Событие | Действие | Обязательность |
+|---------|----------|----------------|
+| Status change (take-task, complete-task) | Обновить state issue | Non-blocking |
+| Новые задачи (plan init, decompose) | Предложить sync | Non-blocking |
+| Verdict (reviewer, tester) | Добавить comment к issue | Non-blocking |
+| Конец сессии (end-session) | Session summary comment | Non-blocking |
+| Финализация (done) | Обновить все issues → Done | Non-blocking |
+
+## Маппинг полей
+
+| tasks.json | Linear | Примечание |
+|-----------|--------|------------|
+| title | title | Прямой маппинг |
+| description + AC + TDD | description | Форматированный Markdown |
+| priority | priority | Через priority_map |
+| status | state | Через status_map |
+| assignee | assigneeId | Через assignee_map |
+| type / tags | labelIds | Через labels |
+| deadline | dueDate | ISO 8601 |
+| dependencies | blockedBy | Через linear_id зависимостей |
+
+## Формат комментариев
+
+При добавлении комментариев к issues использовать формат:
+
+```
+### [Event Type] — [Timestamp]
+
+[Содержимое]
+
+---
+_Synced by agent-forge_
+```
+
+### Типы комментариев
+
+| Событие | Формат |
+|---------|--------|
+| Verdict (reviewer) | `### Code Review — YYYY-MM-DD\n\nVerdict: [verdict]\nFindings: [count]\n[summary]` |
+| Verdict (tester) | `### Test Results — YYYY-MM-DD\n\nVerdict: [verdict]\nTests: [passed]/[total]\n[summary]` |
+| Session end | `### Session Summary — YYYY-MM-DD\n\n[что сделано]\n[следующие шаги]` |
+| Task complete | `### Task Completed — YYYY-MM-DD\n\n[summary of work done]` |
+
+## Error Handling
+
+1. **Non-blocking** — ошибка sync НЕ останавливает пайплайн разработки
+2. **No retry** — при ошибке логировать warning и продолжить
+3. **Graceful degradation** — если Linear MCP недоступен, пропустить sync молча
+4. **Проверка доступности** — перед sync проверить наличие linear-mapping.json и что team/project заполнены
+
+## Конфигурация
+
+Файл: `dev-infra/config/linear-mapping.json`
+
+Заполняется пользователем после `agent-forge init`. Пустые поля = sync отключён для этого маппинга.

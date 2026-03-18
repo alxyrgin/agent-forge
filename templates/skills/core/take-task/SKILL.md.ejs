@@ -316,3 +316,12 @@ Team Lead проверяет 3 источника:
 4. Обнови active-context.md: убрать задачу, добавить результат
 5. Очисти checkpoint: `active: false`
 6. Предложи коммит
+
+## Linear Sync
+
+> Non-blocking. Если Linear MCP недоступен или linear-mapping.json не настроен — пропустить.
+
+1. Проверь наличие `dev-infra/config/linear-mapping.json` и что `linear.team` заполнен
+2. Если задача имеет `linear_id` — обнови issue:
+   - State → «In Progress» (через status_map)
+3. Если задача не имеет `linear_id` — пропустить (будет создан при полном sync)

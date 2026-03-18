@@ -8,7 +8,7 @@ const program = new Command();
 program
   .name('agent-forge')
   .description('AI-driven Development Framework for Claude Code')
-  .version('3.0.0');
+  .version('3.2.0');
 
 program
   .command('init')

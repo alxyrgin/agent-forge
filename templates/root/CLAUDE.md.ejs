@@ -264,6 +264,7 @@ Agent(subagent_type="verifier", prompt="...")
 6. **Inspector после tester** — качество тестов проверяется всегда
 7. **Tech-debt обязателен** — никогда не пропускать, для всех размеров
 8. **Checkpoint после каждого шага** — восстановление при обрыве
+9. **Linear sync non-blocking** — после изменения status задачи синхронизировать в Linear (если настроен). Ошибки sync не останавливают пайплайн
 
 ## Ключевые файлы
 
@@ -285,6 +286,7 @@ Agent(subagent_type="verifier", prompt="...")
 | Shared Resources | `.claude/rules/shared-resources.md` |
 | Quality Gates | `.claude/rules/quality-gates.md` |
 | Agent Output Format | `.claude/rules/agent-output-format.md` |
+| Linear маппинг | `dev-infra/config/linear-mapping.json` |
 | Rollback Protocol | `.claude/rules/rollback-protocol.md` |
 
 ## Команда

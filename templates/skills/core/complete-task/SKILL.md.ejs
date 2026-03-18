@@ -48,3 +48,20 @@ active: false
 - По приоритету и зависимостям
 
 ## 8. Предложить коммит
+
+## Linear Sync
+
+> Non-blocking. Если Linear MCP недоступен или linear-mapping.json не настроен — пропустить.
+
+1. Проверь наличие `dev-infra/config/linear-mapping.json` и что `linear.team` заполнен
+2. Если задача имеет `linear_id` — обнови issue:
+   - State → «Done» (через status_map)
+   - Добавь comment с summary выполненной работы:
+     ```
+     ### Task Completed — YYYY-MM-DD
+
+     [краткое описание что было сделано, какие файлы затронуты]
+
+     ---
+     _Synced by agent-forge_
+     ```
